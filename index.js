@@ -1,7 +1,7 @@
 
-import benchBranch from "./bench";
+var benchBranch = require("./bench");
 
-export default app => {
+module.exports = app => {
   app.on('issue_comment', async context => {
 
     let commentText = context.payload.comment.body;
