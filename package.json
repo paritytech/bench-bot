@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "async-mutex": "^0.1.4",
-    "probot": "^9.5.3",
+    "probot": "^9.9.4",
     "shelljs": "^0.8.3"
   },
   "devDependencies": {
