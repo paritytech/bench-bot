@@ -10,6 +10,10 @@ function executeFailable(shell, cmd) {
     return { stderr, stdout, exit }
 }
 
+function errorResult(stderr) {
+    return { masterResult: stderr, branchResult: "" }
+}
+
 function benchBranch(config) {
     let cwd = process.cwd();
     var shell = require('shelljs');
@@ -31,42 +35,41 @@ function benchBranch(config) {
     console.log("checking out master...");
 
     var { stdout, stderr, exit } = executeFailable(shell, 'git checkout master');
-    if (exit) return;
+    if (exit) return errorResult(stderr);
 
     console.log("pulling out master...");
 
     var { stdout, stderr, exit } = executeFailable(shell, 'git pull origin master');
-    if (exit) return;
+    if (exit) return errorResult(stderr);
 
     console.log("doing git fetch...");
 
     var { stdout, stderr, exit } = executeFailable(shell, 'git fetch');
-    if (exit) return;
+    if (exit) return errorResult(stderr);
 
     console.log("resetting hard to origin/master...");
 
     var { stdout, stderr, exit } = executeFailable(shell, 'git reset --hard origin/master');
-    if (exit) return;
+    if (exit) return errorResult(stderr);
 
     console.log("benching master...");
 
     var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
-    if (exit) return;
+    if (exit) return errorResult(stderr);
 
     var masterResult = stdout;
 
     console.log("merging new branch...");
 
     var { stdout, stderr, exit } = executeFailable(shell, `git merge origin/${config.branch}`);
-    if (exit) return;
+    if (exit) return errorResult(stderr);
 
     console.log("benching new branch...");
 
     var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
-    if (exit) return;
+    if (exit) return errorResult(stderr);
 
     var branchResult = stdout;
-
 
     return { masterResult, branchResult };
 }

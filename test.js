@@ -1,4 +1,4 @@
-var benchBranch = require("./bench");
+import benchBranch from "./bench";
 
 let config = {
     repository: "https://github.com/paritytech/substrate",
