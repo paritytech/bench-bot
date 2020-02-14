@@ -21,6 +21,7 @@
     "test:watch": "jest --watch --notify --notifyMode=change --coverage"
   },
   "dependencies": {
+    "async-mutex": "^0.1.4",
     "probot": "^9.5.3",
     "shelljs": "^0.8.3"
   },

@@ -14,64 +14,73 @@ function errorResult(stderr) {
     return { masterResult: stderr, branchResult: "" }
 }
 
-function benchBranch(config) {
-    let cwd = process.cwd();
-    var shell = require('shelljs');
+let cwd = process.cwd();
+console.log(`process cwd: ${cwd}`);
 
-    shell.cd(cwd + "/git")
-    console.log(`cloning ${config.repository}...`);
+const Mutex = require('async-mutex').Mutex;
+const mutex = new Mutex();
+var shell = require('shelljs');
 
-    var { stdout, stderr, code } = shell.exec(`git clone ${config.repository}`, { silent: true });
+async function benchBranch(config) {
+    console.log("Waiting our turn to run bencharms...")
+    await mutex.runExclusive(async () => {
+        console.log("Started benchmark.");
 
-    if (code == 0) {
-        console.log("Checked out git repository...")
-    } else {
-        console.log("Git clone failed, probably directory exists...");
-        console.log(stderr)
-    }
+        shell.cd(cwd + "/git")
+        console.log(`cloning ${config.repository}...`);
 
-    shell.cd(cwd + "/git/substrate");
+        var { stdout, stderr, code } = shell.exec(`git clone ${config.repository}`, { silent: true });
 
-    console.log("checking out master...");
+        if (code == 0) {
+            console.log("Checked out git repository...")
+        } else {
+            console.log("Git clone failed, probably directory exists...");
+            console.log(stderr)
+        }
 
-    var { stdout, stderr, exit } = executeFailable(shell, 'git checkout master');
-    if (exit) return errorResult(stderr);
+        shell.cd(cwd + "/git/substrate");
 
-    console.log("pulling out master...");
+        console.log("checking out master...");
 
-    var { stdout, stderr, exit } = executeFailable(shell, 'git pull origin master');
-    if (exit) return errorResult(stderr);
+        var { stdout, stderr, exit } = executeFailable(shell, 'git checkout master');
+        if (exit) return errorResult(stderr);
 
-    console.log("doing git fetch...");
+        console.log("pulling out master...");
 
-    var { stdout, stderr, exit } = executeFailable(shell, 'git fetch');
-    if (exit) return errorResult(stderr);
+        var { stdout, stderr, exit } = executeFailable(shell, 'git pull origin master');
+        if (exit) return errorResult(stderr);
 
-    console.log("resetting hard to origin/master...");
+        console.log("doing git fetch...");
 
-    var { stdout, stderr, exit } = executeFailable(shell, 'git reset --hard origin/master');
-    if (exit) return errorResult(stderr);
+        var { stdout, stderr, exit } = executeFailable(shell, 'git fetch');
+        if (exit) return errorResult(stderr);
 
-    console.log("benching master...");
+        console.log("resetting hard to origin/master...");
 
-    var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
-    if (exit) return errorResult(stderr);
+        var { stdout, stderr, exit } = executeFailable(shell, 'git reset --hard origin/master');
+        if (exit) return errorResult(stderr);
 
-    var masterResult = stdout;
+        console.log("benching master...");
 
-    console.log("merging new branch...");
+        var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
+        if (exit) return errorResult(stderr);
 
-    var { stdout, stderr, exit } = executeFailable(shell, `git merge origin/${config.branch}`);
-    if (exit) return errorResult(stderr);
+        var masterResult = stdout;
 
-    console.log("benching new branch...");
+        console.log("merging new branch...");
 
-    var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
-    if (exit) return errorResult(stderr);
+        var { stdout, stderr, exit } = executeFailable(shell, `git merge origin/${config.branch}`);
+        if (exit) return errorResult(stderr);
 
-    var branchResult = stdout;
+        console.log("benching new branch...");
 
-    return { masterResult, branchResult };
+        var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
+        if (exit) return errorResult(stderr);
+
+        var branchResult = stdout;
+
+        return { masterResult, branchResult };
+    });
 }
 
 module.exports = benchBranch;

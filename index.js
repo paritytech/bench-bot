@@ -3,7 +3,6 @@ var benchBranch = require("./bench");
 
 module.exports = app => {
   app.on('issue_comment', async context => {
-
     let commentText = context.payload.comment.body;
     if (!commentText.startsWith("/bench")) {
       return;
@@ -25,9 +24,9 @@ module.exports = app => {
     let config = {
       repository: "https://github.com/paritytech/substrate",
       branch: branchName,
-   }
+    }
 
-    let { masterResult, branchResult } = benchBranch(config);
+    let { masterResult, branchResult } = await benchBranch(config);
 
     let results = `===== MASTER RESULT ======\n${masterResult}\n===== BRANCH RESULT ======\n${branchResult}`;
 
