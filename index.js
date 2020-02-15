@@ -1,5 +1,6 @@
 
 var benchBranch = require("./bench");
+var grabber = require("./grabber");
 
 module.exports = app => {
   app.on('issue_comment', async context => {
@@ -28,7 +29,10 @@ module.exports = app => {
 
     let { masterResult, branchResult } = await benchBranch(config);
 
-    let results = `===== MASTER RESULT ======\n${masterResult}\n===== BRANCH RESULT ======\n${branchResult}`;
+    let results = `===== MASTER RESULT ======\n` +
+      `${grabber.importGrabber(masterResult)}\n` +
+      `===== BRANCH RESULT ======\n` +
+      `${grabber.importGrabber(branchResult)}`;
 
     context.github.issues.updateComment({
       owner, repo, comment_id,
