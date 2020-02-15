@@ -43,24 +43,24 @@ async function benchBranch(app, config) {
 
         shell.cd(cwd + "/git/substrate");
 
-        console.log("checking out master...");
-
-        var { stdout, stderr, exit } = executeFailable(shell, 'git checkout master');
-        if (exit) return errorResult(stderr);
-
-        app.log("pulling out master...");
-
-        var { stdout, stderr, exit } = executeFailable(shell, 'git pull origin master');
-        if (exit) return errorResult(stderr);
-
         app.log("doing git fetch...");
 
         var { stdout, stderr, exit } = executeFailable(shell, 'git fetch');
         if (exit) return errorResult(stderr);
 
+        console.log("checking out master...");
+
+        var { stdout, stderr, exit } = executeFailable(shell, 'git checkout nv-bench-experimental');
+        if (exit) return errorResult(stderr);
+
+        app.log("pulling out master...");
+
+        var { stdout, stderr, exit } = executeFailable(shell, 'git pull origin nv-bench-experimental');
+        if (exit) return errorResult(stderr);
+
         app.log("resetting hard to origin/master...");
 
-        var { stdout, stderr, exit } = executeFailable(shell, 'git reset --hard origin/master');
+        var { stdout, stderr, exit } = executeFailable(shell, 'git reset --hard origin/nv-bench-experimental');
         if (exit) return errorResult(stderr);
 
         var { stdout, stderr, exit } = executeFailable(shell, 'rm -rf ./bin/node/testing/target/criterion');
