@@ -22,8 +22,11 @@ const mutex = new Mutex();
 var shell = require('shelljs');
 
 async function benchBranch(config) {
-    console.log("Waiting our turn to run bencharms...")
-    await mutex.runExclusive(async () => {
+    console.log("Waiting our turn to run benchmark...")
+
+    const release = await mutex.acquire();
+    try {
+
         console.log("Started benchmark.");
 
         shell.cd(cwd + "/git")
@@ -80,7 +83,9 @@ async function benchBranch(config) {
         var branchResult = stdout;
 
         return { masterResult, branchResult };
-    });
+    } finally {
+        release();
+    }
 }
 
 module.exports = benchBranch;
