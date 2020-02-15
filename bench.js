@@ -63,6 +63,9 @@ async function benchBranch(config) {
         var { stdout, stderr, exit } = executeFailable(shell, 'git reset --hard origin/master');
         if (exit) return errorResult(stderr);
 
+        var { stdout, stderr, exit } = executeFailable(shell, 'rm -rf ./bin/node/testing/target/criterion');
+        if (exit) return errorResult(stderr);
+
         console.log("benching master...");
 
         var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
