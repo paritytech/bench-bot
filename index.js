@@ -12,12 +12,10 @@ module.exports = app => {
     const repo = context.payload.repository.name;
     const owner = context.payload.repository.owner.login;
     const pull_number = context.payload.issue.number;
-    console.log(`repo/owner/id: ${repo}/${owner}/${pull_number}`);
 
     let pr = await context.github.pulls.get({ owner, repo, pull_number });
     const branchName = pr.data.head.ref;
-    console.log(`branch: ${branchName}`);
-
+    app.log(`branch: ${branchName}`);
     const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName}\n\n Comment will be updated.` });
     const issue_comment = await context.github.issues.createComment(issueComment);
     const comment_id = issue_comment.data.id;
@@ -27,7 +25,7 @@ module.exports = app => {
       branch: branchName,
     }
 
-    let { masterResult, branchResult } = await benchBranch(config);
+    let { masterResult, branchResult } = await benchBranch(app, config);
 
     let results = `===== MASTER RESULT ======\n` +
       `${grabber.importGrabber(masterResult)}\n` +

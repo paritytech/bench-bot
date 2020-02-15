@@ -6,7 +6,7 @@ let config = {
     branch: "nv-signatures",
 }
 
-benchBranch(config).then(result => {
+benchBranch(console, config).then(result => {
     console.log("===== MASTER RESULT ====== ");
     console.log(grabber.importGrabber(result.masterResult));
 
