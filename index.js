@@ -27,10 +27,21 @@ module.exports = app => {
 
     let { masterResult, branchResult } = await benchBranch(app, config);
 
-    let results = `===== MASTER RESULT ======\n` +
-      `${grabber.importGrabber(masterResult)}\n` +
-      `===== BRANCH RESULT ======\n` +
-      `${grabber.importGrabber(branchResult)}`;
+    const masterHeader = "===== MASTER RESULT ======";
+    const codeBreak = "```";
+    const branchHeader = "===== BRANCH RESULT ======";
+
+    const results = [
+      masterHeader,
+      codeBreak,
+      grabber.importGrabber(masterResult),
+      codeBreak,
+      "",
+      branchHeader,
+      codeBreak,
+      grabber.importGrabber(branchResult),
+      codeBreak
+    ].join("\n");
 
     context.github.issues.updateComment({
       owner, repo, comment_id,

@@ -7,10 +7,20 @@ let config = {
 }
 
 benchBranch(console, config).then(result => {
-    console.log("===== MASTER RESULT ====== ");
-    console.log(grabber.importGrabber(result.masterResult));
+    const masterHeader = "===== MASTER RESULT ======";
+    const codeBreak = "```";
+    const branchHeader = "===== BRANCH RESULT ======";
 
-
-    console.log("===== BRANCH RESULT ====== ");
-    console.log(grabber.importGrabber(result.branchResult));
+    console.log([
+        masterHeader,
+        codeBreak,
+        grabber.importGrabber(result.masterResult),
+        codeBreak,
+        "",
+        branchHeader,
+        codeBreak,
+        grabber.importGrabber(result.branchResult),
+        codeBreak
+      ].join("\n")
+    );
 })

@@ -1,15 +1,3 @@
-function executeFailable(shell, cmd) {
-    const { stdout, stderr, code } = shell.exec(cmd, { silent: true });
-    var exit = false;
-    if (code != 0) {
-        console.log("ops.. Something went wrong: ");
-        console.log("stderr: " + stderr);
-        exit = true;
-    }
-
-    return { stderr, stdout, exit }
-}
-
 function errorResult(stderr) {
     return { masterResult: stderr, branchResult: "" }
 }
