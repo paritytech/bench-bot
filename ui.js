@@ -53,8 +53,8 @@ function importGrabber(stdout)  {
 function format(bench) {
     const { masterResult, branchResult } = bench;
 
-    const masterHeader = "===== MASTER RESULT ======";
-    const branchHeader = "===== BRANCH RESULT ======";
+    const masterHeader = "### MASTER RESULT";
+    const branchHeader = "### BRANCH RESULT";
 
     const results = [
       masterHeader,

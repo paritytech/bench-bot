@@ -29,7 +29,7 @@ module.exports = app => {
 
     context.github.issues.updateComment({
       owner, repo, comment_id,
-      body: `Finished benchmark for branch: ${branchName}\n${results}`,
+      body: `Finished benchmark for branch: **${branchName}**\n\n${results}`,
     });
 
     return;
