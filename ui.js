@@ -30,15 +30,42 @@ No change in performance detected.
 Should be tranformed to this output:
 
 import block/Wasm time:
-[80.670 ms 87.071 ms 101.30 ms]
+[80.670 ms **87.071 ms** 101.30 ms]
 change:
-[+26.063% +47.439% +68.633%] (p = 0.00 < 0.05)
+[+26.063% **+47.439%** +68.633%] (p = 0.00 < 0.05)
 Performance has regressed.
 
 */
 
 function importGrabber(stdout)  {
-    return stdout.match(/import block(.*) time: (.*)|change:(.*)|No change in performance detected.|Performance has(.*)/g).join("\n");
+    let out = stdout.match(/import block(.*) time: (.*)|change:(.*)|No change in performance detected.|Performance has(.*)/g);
+
+    for (var i = 0; i < out.length; i++) {
+        out[i] = out[i].replace(/ [0-9]+\.[0-9]+ ms | (\+|\-)[0-9]+\.[0-9]+% /, function(val) { return "**" + val + "**"; });
+        out[i] = out[i].replace(" time:", " time:\n");
+        out[i] = out[i].replace("change:", "change:\n");
+        out[i] = out[i].replace("import block", "\nimport block");
+    }
+
+    return out.join("\n");
+}
+
+function format(bench) {
+    const { masterResult, branchResult } = bench;
+
+    const masterHeader = "===== MASTER RESULT ======";
+    const branchHeader = "===== BRANCH RESULT ======";
+
+    const results = [
+      masterHeader,
+      importGrabber(masterResult),
+      "",
+      branchHeader,
+      importGrabber(branchResult),
+    ].join("\n");
+
+    return results;
 }
 
 module.exports.importGrabber = importGrabber;
+module.exports.format = format;

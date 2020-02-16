@@ -1,6 +1,6 @@
 
 var benchBranch = require("./bench");
-var grabber = require("./grabber");
+var ui = require("./ui");
 
 module.exports = app => {
   app.on('issue_comment', async context => {
@@ -25,23 +25,7 @@ module.exports = app => {
       branch: branchName,
     }
 
-    let { masterResult, branchResult } = await benchBranch(app, config);
-
-    const masterHeader = "===== MASTER RESULT ======";
-    const codeBreak = "```";
-    const branchHeader = "===== BRANCH RESULT ======";
-
-    const results = [
-      masterHeader,
-      codeBreak,
-      grabber.importGrabber(masterResult),
-      codeBreak,
-      "",
-      branchHeader,
-      codeBreak,
-      grabber.importGrabber(branchResult),
-      codeBreak
-    ].join("\n");
+    results = ui.format(await benchBranch(app, config));
 
     context.github.issues.updateComment({
       owner, repo, comment_id,
