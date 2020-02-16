@@ -21,69 +21,68 @@ const Mutex = require('async-mutex').Mutex;
 const mutex = new Mutex();
 var shell = require('shelljs');
 
+function BenchContext(app, config) {
+    var self = this;
+    self.app = app;
+    self.config = config;
+
+    self.runTask = function(cmd, title) {
+        if (title) app.log(title);
+
+        const { stdout, stderr, code } = shell.exec(cmd, { silent: true });
+        var error = false;
+
+        if (code != 0) {
+            app.log(`ops.. Something went wrong (error code ${code})`);
+            app.log(`stderr: ${stderr}`);
+            error = true;
+        }
+
+        return { stdout, stderr, error };
+    }
+}
+
+function runTask(app, title, task) {}
+
 async function benchBranch(app, config) {
     app.log("Waiting our turn to run benchmark...")
 
     const release = await mutex.acquire();
     try {
-
+        var benchContext = new BenchContext(app, config);
         console.log("Started benchmark.");
-
         shell.cd(cwd + "/git")
-        app.log(`cloning ${config.repository}...`);
 
-        var { stdout, stderr, code } = shell.exec(`git clone ${config.repository}`, { silent: true });
-
-        if (code == 0) {
-            app.log("Checked out git repository...")
-        } else {
+        var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
+        if (error) {
             app.log("Git clone failed, probably directory exists...");
-            app.log(stderr)
         }
 
         shell.cd(cwd + "/git/substrate");
 
-        app.log("doing git fetch...");
+        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
+        if (error) return errorResult(stderr);
 
-        var { stdout, stderr, exit } = executeFailable(shell, 'git fetch');
-        if (exit) return errorResult(stderr);
+        var { error, stderr } = benchContext.runTask(`git checkout master`, "Checking out master...");
+        if (error) return errorResult(stderr);
 
-        console.log("checking out master...");
+        var { error, stderr } = benchContext.runTask(`git pull origin master`, "Pulling out master...");
+        if (error) return errorResult(stderr);
 
-        var { stdout, stderr, exit } = executeFailable(shell, 'git checkout nv-bench-experimental');
-        if (exit) return errorResult(stderr);
+        var { error, stderr } = benchContext.runTask(`git reset --hard origin/master`, "Resetting master hard...");
+        if (error) return errorResult(stderr);
 
-        app.log("pulling out master...");
+        benchContext.runTask(`rm -rf ./bin/node/testing/target/criterion`);
 
-        var { stdout, stderr, exit } = executeFailable(shell, 'git pull origin nv-bench-experimental');
-        if (exit) return errorResult(stderr);
-
-        app.log("resetting hard to origin/master...");
-
-        var { stdout, stderr, exit } = executeFailable(shell, 'git reset --hard origin/nv-bench-experimental');
-        if (exit) return errorResult(stderr);
-
-        var { stdout, stderr, exit } = executeFailable(shell, 'rm -rf ./bin/node/testing/target/criterion');
-        if (exit) return errorResult(stderr);
-
-        app.log("benching master...");
-
-        var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
-        if (exit) return errorResult(stderr);
-
+        var { stdout, stderr, error } = benchContext.runTask('cargo bench -p node-testing import', "Benching master...");
+        if (error) return errorResult(stderr);
         var masterResult = stdout;
 
-        app.log("merging new branch...");
+        var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`, `Merging branch ${config.branch}`);
+        if (error) return errorResult(stderr);
 
-        var { stdout, stderr, exit } = executeFailable(shell, `git merge origin/${config.branch}`);
-        if (exit) return errorResult(stderr);
-
-        app.log("benching new branch...");
-
-        var { stdout, stderr, exit } = executeFailable(shell, 'cargo bench -p node-testing import');
-        if (exit) return errorResult(stderr);
-
-        var branchResult = stdout;
+        var { stdout, stderr, error } = benchContext.runTask('cargo bench -p node-testing import', "Benching new branch...");
+        var branchResult = error ? "ERROR: " + stderr : stdout;
 
         return { masterResult, branchResult };
     } finally {

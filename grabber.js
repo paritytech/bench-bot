@@ -37,7 +37,6 @@ Performance has regressed.
 
 */
 
-
 function importGrabber(stdout)  {
     return stdout.match(/import block(.*) time: (.*)|change:(.*)|No change in performance detected.|Performance has(.*)/g).join("\n");
 }
