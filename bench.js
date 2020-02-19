@@ -30,8 +30,6 @@ function BenchContext(app, config) {
     }
 }
 
-function runTask(app, title, task) {}
-
 async function benchBranch(app, config) {
     app.log("Waiting our turn to run benchmark...")
 
@@ -62,7 +60,7 @@ async function benchBranch(app, config) {
 
         benchContext.runTask(`rm -rf ./bin/node/testing/target/criterion`);
 
-        var { stdout, stderr, error } = benchContext.runTask('cargo bench -p node-testing import', "Benching master...");
+        var { stdout, stderr, error } = benchContext.runTask('cargo bench -p node-testing "import block"', "Benching master...");
         if (error) return errorResult(stderr);
         var masterResult = stdout;
 
