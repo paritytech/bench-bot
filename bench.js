@@ -50,10 +50,9 @@ async function benchBranch(app, config) {
         if (error) return errorResult(stderr);
 
         var { error, stderr } = benchContext.runTask(`git checkout ${config.baseBranch}`, `Checking out ${config.baseBranch}...`);
-        if (error) return errorResult(stderr);
-
-        var { error, stderr } = benchContext.runTask(`git pull origin ${config.baseBranch}`, `Pulling out ${config.baseBranch}...`);
-        if (error) return errorResult(stderr);
+        if (error) {
+            app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
+        }
 
         var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.baseBranch}`, `Resetting ${config.baseBranch} hard...`);
         if (error) return errorResult(stderr);
