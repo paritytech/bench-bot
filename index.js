@@ -3,6 +3,8 @@ var benchBranch = require("./bench");
 var ui = require("./ui");
 
 module.exports = app => {
+  app.log(`base branch: ${process.env.BASE_BRANCH}`);
+
   app.on('issue_comment', async context => {
     let commentText = context.payload.comment.body;
     if (!commentText.startsWith("/bench")) {
@@ -16,13 +18,14 @@ module.exports = app => {
     let pr = await context.github.pulls.get({ owner, repo, pull_number });
     const branchName = pr.data.head.ref;
     app.log(`branch: ${branchName}`);
-    const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName}\n\n Comment will be updated.` });
+    const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName} (vs ${process.env.BASE_BRANCH})\n\n Comment will be updated.` });
     const issue_comment = await context.github.issues.createComment(issueComment);
     const comment_id = issue_comment.data.id;
 
     let config = {
       repository: "https://github.com/paritytech/substrate",
       branch: branchName,
+      baseBranch: process.env.BASE_BRANCH
     }
 
     results = ui.format(await benchBranch(app, config));

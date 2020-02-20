@@ -1,5 +1,5 @@
 function errorResult(stderr) {
-    return { masterResult: stderr, branchResult: "" }
+    return { masterResult: "ERROR: " + stderr, branchResult: "" }
 }
 
 let cwd = process.cwd();
@@ -49,18 +49,18 @@ async function benchBranch(app, config) {
         var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
         if (error) return errorResult(stderr);
 
-        var { error, stderr } = benchContext.runTask(`git checkout master`, "Checking out master...");
+        var { error, stderr } = benchContext.runTask(`git checkout ${config.baseBranch}`, `Checking out ${config.baseBranch}...`);
         if (error) return errorResult(stderr);
 
-        var { error, stderr } = benchContext.runTask(`git pull origin master`, "Pulling out master...");
+        var { error, stderr } = benchContext.runTask(`git pull origin ${config.baseBranch}`, `Pulling out ${config.baseBranch}...`);
         if (error) return errorResult(stderr);
 
-        var { error, stderr } = benchContext.runTask(`git reset --hard origin/master`, "Resetting master hard...");
+        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.baseBranch}`, `Resetting ${config.baseBranch} hard...`);
         if (error) return errorResult(stderr);
 
         benchContext.runTask(`rm -rf ./bin/node/testing/target/criterion`);
 
-        var { stdout, stderr, error } = benchContext.runTask('cargo bench -p node-testing "import block"', "Benching master...");
+        var { stdout, stderr, error } = benchContext.runTask('cargo bench -p node-testing "import block"', `Benching ${config.baseBranch}...`);
         if (error) return errorResult(stderr);
         var masterResult = stdout;
 
