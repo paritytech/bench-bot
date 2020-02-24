@@ -11,6 +11,8 @@ module.exports = app => {
       return;
     }
 
+    let benchId = (commentText.split(" ")[1] || "import").trim();
+
     const repo = context.payload.repository.name;
     const owner = context.payload.repository.owner.login;
     const pull_number = context.payload.issue.number;
@@ -25,7 +27,8 @@ module.exports = app => {
     let config = {
       repository: "https://github.com/paritytech/substrate",
       branch: branchName,
-      baseBranch: process.env.BASE_BRANCH
+      baseBranch: process.env.BASE_BRANCH,
+      id: benchId,
     }
 
     results = ui.format(await benchBranch(app, config));
