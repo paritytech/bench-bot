@@ -38,7 +38,7 @@ Performance has regressed.
 */
 
 function importGrabber(stdout)  {
-    let out = stdout.match(/import block(.*) time: (.*)|change:(.*)|No change in performance detected.|Performance has(.*)|ERROR:(.*)/g);
+    let out = stdout.match(/time: \[(.*)|(.*)\/Native (.*)|(.*)\/Wasm (.*)|change:(.*)|No change in performance detected.|Performance has(.*)|ERROR:(.*)/g);
     if (!out) {
         return "<EMPTY RESULT>";
     }
@@ -48,6 +48,7 @@ function importGrabber(stdout)  {
         out[i] = out[i].replace(" time:", " time:\n");
         out[i] = out[i].replace("change:", "change:\n");
         out[i] = out[i].replace("import block", "\nimport block");
+        out[i] = out[i].replace("account reaping", "\naccount reaping");
     }
 
     return out.join("\n");
