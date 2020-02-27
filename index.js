@@ -31,7 +31,13 @@ module.exports = app => {
       id: benchId,
     }
 
-    results = ui.format(await benchBranch(app, config));
+    let branchResults = await benchBranch(app, config);
+    app.log("raw results master: ");
+    app.lo(branchResults.masterResult);
+    app.log("raw results branch: ");
+    app.lo(branchResults.branchResult);
+
+    results = ui.format(branchResults);
 
     context.github.issues.updateComment({
       owner, repo, comment_id,

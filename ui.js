@@ -45,7 +45,7 @@ function importGrabber(stdout)  {
 
     for (var i = 0; i < out.length; i++) {
         out[i] = out[i].replace(/ [0-9]+\.[0-9]+ ms | (\+|\-)[0-9]+\.[0-9]+% /, function(val) { return " **" + val.trim() + "** "; });
-        out[i] = out[i].replace(" time:", " time:\n");
+        out[i] = out[i].replace("time:", "time:\n");
         out[i] = out[i].replace("change:", "change:\n");
         out[i] = out[i].replace("import block", "\nimport block");
         out[i] = out[i].replace("account reaping", "\naccount reaping");

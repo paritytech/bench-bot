@@ -17,12 +17,13 @@
     "dev": "nodemon",
     "start": "probot run ./index.js",
     "lint": "standard --fix",
-    "test": "jest && standard",
+    "test": "mocha",
     "test:watch": "jest --watch --notify --notifyMode=change --coverage"
   },
   "dependencies": {
     "async-mutex": "^0.1.4",
     "dotenv": "^8.2.0",
+    "mocha": "^7.1.0",
     "probot": "^9.9.4",
     "shelljs": "^0.8.3"
   },
