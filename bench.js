@@ -40,6 +40,11 @@ var BenchConfigs = {
         title: "Import Benchmark (random transfers involving account reaping)",
         preparationCommand: `rm -rf ./bin/node/testing/target/criterion`,
         branchCommand: 'cargo bench -p node-testing B-0002'
+    },
+    "ed25519": {
+        title: "Import Benchmark (random transfers, ed25519 signed)",
+        preparationCommand: `rm -rf ./bin/node/testing/target/criterion`,
+        branchCommand: 'cargo bench -p node-testing B-0003'
     }
 }
 
