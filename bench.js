@@ -96,8 +96,11 @@ async function benchBranch(app, config) {
         var { stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
 
         await collector.CollectBranchCriterionWasmNative(resultsPath);
-        
-        return await collector.Report();
+
+        let report = await collector.Report();
+        report = `Benchmark: **${benchConfig.title}**\n\n` + report;
+
+        return report;
     } finally {
         release();
     }
