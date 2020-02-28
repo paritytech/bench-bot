@@ -1,6 +1,5 @@
 
 var benchBranch = require("./bench");
-var ui = require("./ui");
 
 module.exports = app => {
   app.log(`base branch: ${process.env.BASE_BRANCH}`);
@@ -31,17 +30,12 @@ module.exports = app => {
       id: benchId,
     }
 
-    let branchResults = await benchBranch(app, config);
-    app.log("raw results master: ");
-    app.lo(branchResults.masterResult);
-    app.log("raw results branch: ");
-    app.lo(branchResults.branchResult);
-
-    results = ui.format(branchResults);
+    let report = await benchBranch(app, config);
+    app.log(`report: ${report}`);
 
     context.github.issues.updateComment({
       owner, repo, comment_id,
-      body: `Finished benchmark for branch: **${branchName}**\n\n${results}`,
+      body: `Finished benchmark for branch: **${branchName}**\n\n${report}`,
     });
 
     return;

@@ -1,0 +1,21 @@
+group,function,value,throughput_num,throughput_type,sample_measured_value,unit,iteration_count
+import block,,Wasm,,,91643037.0,ns,1
+import block,,Wasm,,,177686471.0,ns,2
+import block,,Wasm,,,269846396.0,ns,3
+import block,,Wasm,,,361857092.0,ns,4
+import block,,Wasm,,,446704337.0,ns,5
+import block,,Wasm,,,533563542.0,ns,6
+import block,,Wasm,,,622811274.0,ns,7
+import block,,Wasm,,,723976134.0,ns,8
+import block,,Wasm,,,807220789.0,ns,9
+import block,,Wasm,,,893263032.0,ns,10
+import block,,Wasm,,,989740499.0,ns,11
+import block,,Wasm,,,1038518514.0,ns,12
+import block,,Wasm,,,1123103257.0,ns,13
+import block,,Wasm,,,1180047005.0,ns,14
+import block,,Wasm,,,1327464541.0,ns,15
+import block,,Wasm,,,1358153010.0,ns,16
+import block,,Wasm,,,1480275925.0,ns,17
+import block,,Wasm,,,1627631170.0,ns,18
+import block,,Wasm,,,1700761177.0,ns,19
+import block,,Wasm,,,1807227661.0,ns,20

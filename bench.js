@@ -9,6 +9,8 @@ const Mutex = require('async-mutex').Mutex;
 const mutex = new Mutex();
 var shell = require('shelljs');
 
+var libCollector = require("./collector");
+
 function BenchContext(app, config) {
     var self = this;
     self.app = app;
@@ -33,16 +35,19 @@ function BenchContext(app, config) {
 var BenchConfigs = {
     "import": {
         title: "Import Benchmark (random transfers)",
+        criterionDir: "bin/node/testing/target/criterion/import-block-B-0001",
         preparationCommand: `rm -rf ./bin/node/testing/target/criterion`,
         branchCommand: 'cargo bench -p node-testing B-0001'
     },
     "reaping": {
         title: "Import Benchmark (random transfers involving account reaping)",
+        criterionDir: "bin/node/testing/target/criterion/import-block-reaping-B-0002",
         preparationCommand: `rm -rf ./bin/node/testing/target/criterion`,
         branchCommand: 'cargo bench -p node-testing B-0002'
     },
     "ed25519": {
         title: "Import Benchmark (random transfers, ed25519 signed)",
+        criterionDir: "bin/node/testing/target/criterion/import-block-ed25519-B-0003",
         preparationCommand: `rm -rf ./bin/node/testing/target/criterion`,
         branchCommand: 'cargo bench -p node-testing B-0003'
     }
@@ -53,12 +58,15 @@ async function benchBranch(app, config) {
 
     const release = await mutex.acquire();
     var benchConfig = BenchConfigs[config.id || "import"];
+    var resultsPath = "./" + benchConfig.criterionDir;
+    collector = new libCollector.Collector();
+
     try {
         var benchContext = new BenchContext(app, config);
         console.log(`Started benchmark "${benchConfig.title}."`);
         shell.cd(cwd + "/git")
 
-        var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
+       var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
         if (error) {
             app.log("Git clone failed, probably directory exists...");
         }
@@ -78,17 +86,18 @@ async function benchBranch(app, config) {
 
         benchContext.runTask(benchConfig.preparationCommand);
 
-        var { stdout, stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
+        var { stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
         if (error) return errorResult(stderr);
-        var masterResult = stdout;
+        await collector.CollectBaseCriterionWasmNative(resultsPath);
 
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`, `Merging branch ${config.branch}`);
         if (error) return errorResult(stderr);
 
-        var { stdout, stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
-        var branchResult = error ? "ERROR: " + stderr : stdout;
+        var { stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
 
-        return { masterResult, branchResult };
+        await collector.CollectBranchCriterionWasmNative(resultsPath);
+        
+        return await collector.Report();
     } finally {
         release();
     }

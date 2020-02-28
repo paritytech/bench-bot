@@ -1,0 +1,21 @@
+group,function,value,throughput_num,throughput_type,sample_measured_value,unit,iteration_count
+import block,,Native,,,26317403.0,ns,1
+import block,,Native,,,53300752.0,ns,2
+import block,,Native,,,79123024.0,ns,3
+import block,,Native,,,107367307.0,ns,4
+import block,,Native,,,132537568.0,ns,5
+import block,,Native,,,159022929.0,ns,6
+import block,,Native,,,183784076.0,ns,7
+import block,,Native,,,213579057.0,ns,8
+import block,,Native,,,236030513.0,ns,9
+import block,,Native,,,263452148.0,ns,10
+import block,,Native,,,293302379.0,ns,11
+import block,,Native,,,319688715.0,ns,12
+import block,,Native,,,345728901.0,ns,13
+import block,,Native,,,371933323.0,ns,14
+import block,,Native,,,399034224.0,ns,15
+import block,,Native,,,424718043.0,ns,16
+import block,,Native,,,448467443.0,ns,17
+import block,,Native,,,473914014.0,ns,18
+import block,,Native,,,504821309.0,ns,19
+import block,,Native,,,529014366.0,ns,20
