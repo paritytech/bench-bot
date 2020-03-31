@@ -35,21 +35,11 @@ function BenchContext(app, config) {
 var BenchConfigs = {
     "import": {
         title: "Import Benchmark (random transfers)",
-        criterionDir: "bin/node/testing/target/criterion/import-block-B-0001",
-        preparationCommand: `rm -rf ./bin/node/testing/target/criterion`,
-        branchCommand: 'cargo bench -p node-testing B-0001'
-    },
-    "reaping": {
-        title: "Import Benchmark (random transfers involving account reaping)",
-        criterionDir: "bin/node/testing/target/criterion/import-block-reaping-B-0002",
-        preparationCommand: `rm -rf ./bin/node/testing/target/criterion`,
-        branchCommand: 'cargo bench -p node-testing B-0002'
+        branchCommand: 'cargo run -p node-bench -- node::import::wasm::sr25519 --json'
     },
     "ed25519": {
-        title: "Import Benchmark (random transfers, ed25519 signed)",
-        criterionDir: "bin/node/testing/target/criterion/import-block-ed25519-B-0003",
-        preparationCommand: `rm -rf ./bin/node/testing/target/criterion`,
-        branchCommand: 'cargo bench -p node-testing B-0003'
+        title: "Import Benchmark (random transfers)",
+        branchCommand: 'cargo run -p node-bench -- node::import::wasm::ed25519 --json'
     }
 }
 
@@ -93,9 +83,9 @@ async function benchBranch(app, config) {
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`, `Merging branch ${config.branch}`);
         if (error) return errorResult(stderr);
 
-        var { stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
+        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
 
-        await collector.CollectBranchCriterionWasmNative(resultsPath);
+        await collector.CollectBranchCriterionWasmNative(stdout);
 
         let report = await collector.Report();
         report = `Benchmark: **${benchConfig.title}**\n\n` + report;

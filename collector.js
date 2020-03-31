@@ -33,14 +33,25 @@ var Collector = function() {
         var branchNative = branchNativeStats.Median.point_estimate;
 
         self.metrics["Branch: Wasm"] = `${self.FormatMs(branchWasm)} ms (+/- ${self.FormatMs(branchWasmStats.Median.standard_error)} ms)`;
-        self.metrics["Branch: Native"] =`${self.FormatMs(branchNative)} ms (+/- ${self.FormatMs(branchNativeStats.Median.standard_error)} ms)`;
+        self.metrics["Branch: Native"] = `${self.FormatMs(branchNative)} ms (+/- ${self.FormatMs(branchNativeStats.Median.standard_error)} ms)`;
 
         var changeWasm = (branchWasm - self.baseWasm) / self.baseWasm;
         var changeNative = (branchNative - self.baseNative) / self.baseNative;
 
         self.metrics["Change: Wasm"] = self.FormatPc(changeWasm);
         self.metrics["Change: Native"] = self.FormatPc(changeNative);
+    }
 
+    self.CollectBaseCustomRunner = async function(stdout) {
+        self.baseNative = JSON.parse(stdout)[0]["average"];
+        self.metrics["Master"] = `${self.FormatMs(self.baseNative)} ms`;
+    }
+
+    self.CollectBranchCustomRunner = async function(stdout) {
+        self.branchNative = JSON.parse(stdout)[0]["average"];
+        var change = (self.branchNative - self.baseNative) / self.baseNative;
+        self.metrics["Branch"] = `${self.FormatMs(self.branchNative)} ms`;
+        self.metrics["Change"] = self.FormatPc(change);
     }
 
     self.loadStats = async function(path) {
