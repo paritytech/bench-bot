@@ -78,14 +78,14 @@ async function benchBranch(app, config) {
 
         var { stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
         if (error) return errorResult(stderr);
-        await collector.CollectBaseCriterionWasmNative(resultsPath);
+        await collector.CollectBaseCustomRunner(resultsPath);
 
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`, `Merging branch ${config.branch}`);
         if (error) return errorResult(stderr);
 
         var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
 
-        await collector.CollectBranchCriterionWasmNative(stdout);
+        await collector.CollectBranchCustomRunner(stdout);
 
         let report = await collector.Report();
         report = `Benchmark: **${benchConfig.title}**\n\n` + report;
