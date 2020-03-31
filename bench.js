@@ -35,11 +35,11 @@ function BenchContext(app, config) {
 var BenchConfigs = {
     "import": {
         title: "Import Benchmark (random transfers)",
-        branchCommand: 'cargo run -p node-bench -- node::import::wasm::sr25519 --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519 --json'
     },
     "ed25519": {
         title: "Import Benchmark (random transfers)",
-        branchCommand: 'cargo run -p node-bench -- node::import::wasm::ed25519 --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::ed25519 --json'
     }
 }
 
@@ -76,9 +76,10 @@ async function benchBranch(app, config) {
 
         benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
 
-        var { stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
+        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
         if (error) return errorResult(stderr);
-        await collector.CollectBaseCustomRunner(resultsPath);
+
+        await collector.CollectBaseCustomRunner(stdout);
 
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`, `Merging branch ${config.branch}`);
         if (error) return errorResult(stderr);
