@@ -35,11 +35,15 @@ function BenchContext(app, config) {
 var BenchConfigs = {
     "import": {
         title: "Import Benchmark (random transfers)",
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519 --json'
+    },
+    "import-wasm": {
+        title: "Import Benchmark (random transfers)",
         branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519 --json'
     },
     "ed25519": {
         title: "Import Benchmark (random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::ed25519 --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::ed25519 --json'
     }
 }
 
