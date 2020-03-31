@@ -1,5 +1,5 @@
-function errorResult(stderr) {
-    return { masterResult: "ERROR: " + stderr, branchResult: "" }
+function errorResult(stderr, step) {
+    return { error: true, step, stderr }
 }
 
 let cwd = process.cwd();
@@ -86,7 +86,7 @@ async function benchBranch(app, config) {
         await collector.CollectBaseCustomRunner(stdout);
 
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`, `Merging branch ${config.branch}`);
-        if (error) return errorResult(stderr);
+        if (error) return errorResult(stderr, "merge");
 
         var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
 

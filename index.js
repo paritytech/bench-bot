@@ -31,12 +31,27 @@ module.exports = app => {
     }
 
     let report = await benchBranch(app, config);
-    app.log(`report: ${report}`);
 
-    context.github.issues.updateComment({
-      owner, repo, comment_id,
-      body: `Finished benchmark for branch: **${branchName}**\n\n${report}`,
-    });
+    if (report.error) {
+      app.log(`error: ${report.stderr}`)
+      if (report.step != "merge") {
+        context.github.issues.updateComment({
+          owner, repo, comment_id,
+          body: `Error running benchmark: **${branchName}**\n\n<details><summary>stdout</summary>${report.stderr}</details>`,
+        });
+      } else {
+        context.github.issues.updateComment({
+          owner, repo, comment_id,
+          body: `Error running benchmark: **${branchName}**\n\nMerge conflict merging branch to master!`,
+        });
+      }
+    } else {
+      app.log(`report: ${report}`);
+      context.github.issues.updateComment({
+        owner, repo, comment_id,
+        body: `Finished benchmark for branch: **${branchName}**\n\n${report}`,
+      });
+    }
 
     return;
   })
