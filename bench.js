@@ -74,7 +74,7 @@ async function benchBranch(app, config) {
         var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.baseBranch}`, `Resetting ${config.baseBranch} hard...`);
         if (error) return errorResult(stderr);
 
-        benchContext.runTask(benchConfig.preparationCommand);
+        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
 
         var { stderr, error } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
         if (error) return errorResult(stderr);
