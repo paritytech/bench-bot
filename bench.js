@@ -38,19 +38,19 @@ var BenchConfigs = {
         branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::medium --json'
     },
     "import/small": {
-        title: "Import Benchmark (random transfers)",
+        title: "Import Benchmark (Small block (10tx) with random transfers)",
         branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::small --json'
     },
     "import/large": {
-        title: "Import Benchmark (random transfers)",
+        title: "Import Benchmark (Large block (500tx) with random transfers)",
         branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::large --json'
     },
     "import/wasm": {
-        title: "Import Benchmark (random transfers)",
+        title: "Import Benchmark via wasm (random transfers)",
         branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::medium --json'
     },
     "ed25519": {
-        title: "Import Benchmark (random transfers)",
+        title: "Import Benchmark (random transfers, ed25519 signed)",
         branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::ed25519::medium --json'
     }
 }
