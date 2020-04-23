@@ -45,6 +45,10 @@ var BenchConfigs = {
         title: "Import Benchmark (Large block (500tx) with random transfers)",
         branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::large --json'
     },
+    "import/full-wasm": {
+        title: "Import Benchmark (Full block with wasm, for weights validation)",
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::full --json'
+    },
     "import/wasm": {
         title: "Import Benchmark via wasm (random transfers)",
         branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::medium --json'
