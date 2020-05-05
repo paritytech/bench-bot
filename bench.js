@@ -35,27 +35,27 @@ function BenchContext(app, config) {
 var BenchConfigs = {
     "import": {
         title: "Import Benchmark (random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::medium --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::medium --json'
     },
     "import/small": {
         title: "Import Benchmark (Small block (10tx) with random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::small --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::small --json'
     },
     "import/large": {
         title: "Import Benchmark (Large block (500tx) with random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::large --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::large --json'
     },
     "import/full-wasm": {
         title: "Import Benchmark (Full block with wasm, for weights validation)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::full --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::full --json'
     },
     "import/wasm": {
         title: "Import Benchmark via wasm (random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::medium --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::medium --json'
     },
     "ed25519": {
         title: "Import Benchmark (random transfers, ed25519 signed)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::ed25519::medium --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::ed25519::transfer_keep_alive::medium --json'
     }
 }
 
