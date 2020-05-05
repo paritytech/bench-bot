@@ -63,16 +63,16 @@ async function benchBranch(app, config) {
     app.log("Waiting our turn to run benchmark...")
 
     const release = await mutex.acquire();
-    var benchConfig = BenchConfigs[config.id || "import"];
-    var resultsPath = "./" + benchConfig.criterionDir;
-    collector = new libCollector.Collector();
 
     try {
+        var benchConfig = BenchConfigs[config.id || "import"];
+        collector = new libCollector.Collector();
+
         var benchContext = new BenchContext(app, config);
         console.log(`Started benchmark "${benchConfig.title}."`);
         shell.cd(cwd + "/git")
 
-       var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
+        var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
         if (error) {
             app.log("Git clone failed, probably directory exists...");
         }
@@ -108,7 +108,11 @@ async function benchBranch(app, config) {
         report = `Benchmark: **${benchConfig.title}**\n\n` + report;
 
         return report;
-    } finally {
+    }
+    catch (error) {
+        return errorResult(error.toString());
+    }
+    finally {
         release();
     }
 }
