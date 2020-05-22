@@ -32,30 +32,32 @@ function BenchContext(app, config) {
     }
 }
 
+//::node::import::native::sr25519::transfer_keep_alive::paritydb::small
+
 var BenchConfigs = {
     "import": {
         title: "Import Benchmark (random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::medium --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::medium --json'
     },
     "import/small": {
         title: "Import Benchmark (Small block (10tx) with random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::small --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::small --json'
     },
     "import/large": {
         title: "Import Benchmark (Large block (500tx) with random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::large --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::large --json'
     },
     "import/full-wasm": {
         title: "Import Benchmark (Full block with wasm, for weights validation)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::full --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::full --json'
     },
     "import/wasm": {
         title: "Import Benchmark via wasm (random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::medium --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::medium --json'
     },
     "ed25519": {
         title: "Import Benchmark (random transfers, ed25519 signed)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::ed25519::transfer_keep_alive::medium --json'
+        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::ed25519::transfer_keep_alive::rocksdb::medium --json'
     }
 }
 
