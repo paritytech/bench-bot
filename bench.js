@@ -72,6 +72,7 @@ async function benchBranch(app, config) {
 
         var benchContext = new BenchContext(app, config);
         console.log(`Started benchmark "${benchConfig.title}."`);
+        shell.mkdir("git")
         shell.cd(cwd + "/git")
 
         var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
