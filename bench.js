@@ -132,7 +132,7 @@ var RuntimeBenchmarkConfigs = {
 }
 
 function checkRuntimeBenchmarkCommand(command) {
-    let required = ["benchmark", "--output", "--pallet", "--extrinsic", "--execution", "--wasm-execution", "--steps", "--repeat", "--chain"];
+    let required = ["benchmark", "--pallet", "--extrinsic", "--execution", "--wasm-execution", "--steps", "--repeat", "--chain"];
     let missing = [];
     for (const flag of required) {
         if (!command.includes(flag)) {
@@ -160,6 +160,7 @@ async function benchmarkRuntime(app, config) {
         benchConfig.branchCommand += " " + extra;
 
         let missing = checkRuntimeBenchmarkCommand(benchConfig.branchCommand);
+        let output = benchConfig.branchCommand.includes("--output");
 
         if (missing.length > 0) {
             return errorResult(`Missing required flags: ${missing.toString()}`)
@@ -197,10 +198,12 @@ async function benchmarkRuntime(app, config) {
 
         var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
 
-        // With runtime benchmarks, we commit the benchmark file to the repo
-        benchContext.runTask(`git add .`, `Adding new files.`);
-        benchContext.runTask(`git commit -m "${benchConfig.branchCommand}"`, `Committing changes.`);
-        benchContext.runTask(`git push`), `Pushing changes.`;
+        // If `--output` is set, we commit the benchmark file to the repo
+        if (output) {
+            benchContext.runTask(`git add .`, `Adding new files.`);
+            benchContext.runTask(`git commit -m "${benchConfig.branchCommand}"`, `Committing changes.`);
+            benchContext.runTask(`git push`), `Pushing changes.`;
+        }
         let report = `Benchmark: **${benchConfig.title}**\n\n`
             + benchConfig.branchCommand
             + "\n\n<details>\n<summary>Results</summary>\n\n"
