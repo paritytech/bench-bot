@@ -31,6 +31,7 @@ module.exports = app => {
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
       id: action,
+      pushToken: process.env.PUSH_TOKEN,
       extra: extra,
     }
 
