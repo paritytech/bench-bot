@@ -6,13 +6,12 @@ module.exports = app => {
 
   app.on('issue_comment', async context => {
     let commentText = context.payload.comment.body;
-    let command = commentText.split(" ")[0];
-    if (command != "/bench" && command != "/benchmark") {
+    if (!commentText.startsWith("/bench")) {
       return;
     }
 
     // Capture `<action>` in `/bench <action> <extra>`
-    let benchId = commentText.split(" ").splice(1, 1).join(" ").trim();
+    let action = commentText.split(" ").splice(1, 1).join(" ").trim();
     // Capture all `<extra>` text in `/bench <action> <extra>`
     let extra = commentText.split(" ").splice(2).join(" ").trim();
 
@@ -31,15 +30,15 @@ module.exports = app => {
       repository: "https://github.com/paritytech/substrate",
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
-      id: benchId,
+      id: action,
       extra: extra,
     }
 
     let report;
-    if (command == "/bench") {
-      report = await benchBranch(app, config)
-    } else if (command == "/benchmark") {
+    if (action == "runtime") {
       report = await benchmarkRuntime(app, config)
+    } else {
+      report = await benchBranch(app, config)
     };
 
     if (report.error) {

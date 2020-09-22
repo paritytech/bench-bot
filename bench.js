@@ -149,12 +149,13 @@ async function benchmarkRuntime(app, config) {
     const release = await mutex.acquire();
 
     try {
-        var benchConfig = RuntimeBenchmarkConfigs[config.id || "pallet"];
-        var extra = config.extra || "";
-
-        if (extra.length == 0) {
+        if (config.extra.split(" ").length < 2) {
             return errorResult(`Incomplete command.`)
         }
+
+        let command = config.extra.split(" ")[0];
+        var benchConfig = RuntimeBenchmarkConfigs[command];
+        var extra = config.extra.split(" ").slice(1).join(" ").trim();
 
         // Append extra flags to the end of the command
         benchConfig.branchCommand += " " + extra;
@@ -196,7 +197,7 @@ async function benchmarkRuntime(app, config) {
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
         if (error) return errorResult(stderr, "merge");
 
-        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
+        var { error, stdout, stderr } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
 
         // If `--output` is set, we commit the benchmark file to the repo
         if (output) {
@@ -207,7 +208,7 @@ async function benchmarkRuntime(app, config) {
         let report = `Benchmark: **${benchConfig.title}**\n\n`
             + benchConfig.branchCommand
             + "\n\n<details>\n<summary>Results</summary>\n\n"
-            + stdout
+            + (stdout ? stdout : stderr)
             + "\n\n </details>";
 
         return report;
