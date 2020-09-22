@@ -143,6 +143,17 @@ function checkRuntimeBenchmarkCommand(command) {
     return missing;
 }
 
+function checkAllowedCharacters(command) {
+    let banned = ["#", "&", "|", ";", ":"];
+    for (const token of banned) {
+        if (command.includes(token)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 async function benchmarkRuntime(app, config) {
     app.log("Waiting our turn to run benchmark...")
 
@@ -156,6 +167,10 @@ async function benchmarkRuntime(app, config) {
         let command = config.extra.split(" ")[0];
         var benchConfig = RuntimeBenchmarkConfigs[command];
         var extra = config.extra.split(" ").slice(1).join(" ").trim();
+
+        if (!checkAllowedCharacters(extra)) {
+            return errorResult(`Not allowed to use #&|;: in the command!`);
+        }
 
         // Append extra flags to the end of the command
         benchConfig.branchCommand += " " + extra;
@@ -196,6 +211,7 @@ async function benchmarkRuntime(app, config) {
         // Merge master branch
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
         if (error) return errorResult(stderr, "merge");
+        benchContext.runTask(`git push`), `Pushing merge.`;
 
         var { error, stdout, stderr } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
 
