@@ -120,4 +120,104 @@ async function benchBranch(app, config) {
     }
 }
 
-module.exports = benchBranch;
+var RuntimeBenchmarkConfigs = {
+    "pallet": {
+        title: "Runtime Benchmarks Pallet",
+        branchCommand: 'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark --chain dev --steps 50 --repeat 20 --extrinsic "*" --raw --execution=wasm --wasm-execution=compiled --output --pallet',
+    },
+    "custom": {
+        title: "Runtime Benchmarks Custom",
+        branchCommand: 'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
+    }
+}
+
+function checkRuntimeBenchmarkCommand(command) {
+    let required = ["benchmark", "--output", "--pallet", "--extrinsic", "--execution", "--wasm-execution", "--steps", "--repeat", "--chain"];
+    let missing = [];
+    for (const flag of required) {
+        if (!command.includes(flag)) {
+            missing.push(flag);
+        }
+    }
+
+    return missing;
+}
+
+async function benchmarkRuntime(app, config) {
+    app.log("Waiting our turn to run benchmark...")
+
+    const release = await mutex.acquire();
+
+    try {
+        var benchConfig = RuntimeBenchmarkConfigs[config.id || "pallet"];
+        var extra = config.extra || "";
+
+        if (extra.length == 0) {
+            return errorResult(`Incomplete command.`)
+        }
+
+        // Append extra flags to the end of the command
+        benchConfig.branchCommand += " " + extra;
+
+        let missing = checkRuntimeBenchmarkCommand(benchConfig.branchCommand);
+
+        if (missing.length > 0) {
+            return errorResult(`Missing required flags: ${missing.toString()}`)
+        }
+
+        var benchContext = new BenchContext(app, config);
+        console.log(`Started runtime benchmark "${benchConfig.title}."`);
+        shell.mkdir("git")
+        shell.cd(cwd + "/git")
+
+        var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
+        if (error) {
+            app.log("Git clone failed, probably directory exists...");
+        }
+
+        shell.cd(cwd + "/git/substrate");
+
+        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
+        if (error) return errorResult(stderr);
+
+        // Checkout the custom branch
+        var { error, stderr } = benchContext.runTask(`git checkout ${config.branch}`, `Checking out ${config.branch}...`);
+        if (error) {
+            app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
+        }
+
+        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`, `Resetting ${config.branch} hard...`);
+        if (error) return errorResult(stderr);
+
+        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
+
+        // Merge master branch
+        var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
+        if (error) return errorResult(stderr, "merge");
+
+        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
+
+        // With runtime benchmarks, we commit the benchmark file to the repo
+        benchContext.runTask(`git add .`, `Adding new files.`);
+        benchContext.runTask(`git commit -m "${benchConfig.branchCommand}"`, `Committing changes.`);
+        benchContext.runTask(`git push`), `Pushing changes.`;
+        let report = `Benchmark: **${benchConfig.title}**\n\n`
+            + benchConfig.branchCommand
+            + "\n\n<details>\n<summary>Results</summary>\n\n"
+            + stdout
+            + "\n\n </details>";
+
+        return report;
+    }
+    catch (error) {
+        return errorResult(error.toString());
+    }
+    finally {
+        release();
+    }
+}
+
+module.exports = {
+    benchBranch: benchBranch,
+    benchmarkRuntime: benchmarkRuntime,
+};

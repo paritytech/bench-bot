@@ -1,4 +1,4 @@
-var benchBranch = require("./bench");
+var { benchBranch } = require("./bench");
 require("dotenv").config();
 
 console.log(`BASE_BRANCH=${process.env.BASE_BRANCH}`);

@@ -1,16 +1,20 @@
 
-var benchBranch = require("./bench");
+var { benchBranch, benchmarkRuntime } = require("./bench");
 
 module.exports = app => {
   app.log(`base branch: ${process.env.BASE_BRANCH}`);
 
   app.on('issue_comment', async context => {
     let commentText = context.payload.comment.body;
-    if (!commentText.startsWith("/bench")) {
+    let command = commentText.split(" ")[0];
+    if (command != "/bench" && command != "/benchmark") {
       return;
     }
 
-    let benchId = (commentText.split(" ")[1] || "import").trim();
+    // Capture `<action>` in `/bench <action> <extra>`
+    let benchId = commentText.split(" ").splice(1, 1).join(" ").trim();
+    // Capture all `<extra>` text in `/bench <action> <extra>`
+    let extra = commentText.split(" ").splice(2).join(" ").trim();
 
     const repo = context.payload.repository.name;
     const owner = context.payload.repository.owner.login;
@@ -28,9 +32,15 @@ module.exports = app => {
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
       id: benchId,
+      extra: extra,
     }
 
-    let report = await benchBranch(app, config);
+    let report;
+    if (command == "/bench") {
+      report = await benchBranch(app, config)
+    } else if (command == "/benchmark") {
+      report = await benchmarkRuntime(app, config)
+    };
 
     if (report.error) {
       app.log(`error: ${report.stderr}`)
