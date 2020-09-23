@@ -219,7 +219,7 @@ async function benchmarkRuntime(app, config) {
         if (output) {
             benchContext.runTask(`git add .`, `Adding new files.`);
             benchContext.runTask(`git commit -m "${benchConfig.branchCommand}"`, `Committing changes.`);
-            benchContext.runTask(`git push`), `Pushing changes.`;
+            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`), `Pushing changes.`;
         }
         let report = `Benchmark: **${benchConfig.title}**\n\n`
             + benchConfig.branchCommand
