@@ -123,7 +123,19 @@ async function benchBranch(app, config) {
 var RuntimeBenchmarkConfigs = {
     "pallet": {
         title: "Runtime Benchmarks Pallet",
-        branchCommand: 'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark --chain dev --steps 50 --repeat 20 --extrinsic "*" --raw --execution=wasm --wasm-execution=compiled --output --pallet',
+        branchCommand: [
+            'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
+            '--chain dev',
+            '--steps 50',
+            '--repeat 20',
+            '--extrinsic "*"',
+            '--raw',
+            '--execution=wasm',
+            '--wasm-execution=compiled',
+            '--output ./bin/node/runtime/src/weights',
+            '--header ./HEADER',
+            '--pallet',
+        ].join(' '),
     },
     "custom": {
         title: "Runtime Benchmarks Custom",
@@ -211,7 +223,11 @@ async function benchmarkRuntime(app, config) {
         // Merge master branch
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
         if (error) return errorResult(stderr, "merge");
-        benchContext.runTask(`git push`), `Pushing merge.`;
+        if (config.pushToken) {
+            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`, `Pushing merge with pushToken.`);
+        } else {
+            benchContext.runTask(`git push`, `Pushing merge.`);
+        }
 
         var { error, stdout, stderr } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
 
@@ -219,7 +235,11 @@ async function benchmarkRuntime(app, config) {
         if (output) {
             benchContext.runTask(`git add .`, `Adding new files.`);
             benchContext.runTask(`git commit -m "${benchConfig.branchCommand}"`, `Committing changes.`);
-            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`), `Pushing changes.`;
+            if (config.pushToken) {
+                benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`, `Pushing commit with pushToken.`);
+            } else {
+                benchContext.runTask(`git push`, `Pushing commit.`);
+            }
         }
         let report = `Benchmark: **${benchConfig.title}**\n\n`
             + benchConfig.branchCommand
