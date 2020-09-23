@@ -1,5 +1,5 @@
 
-var benchBranch = require("./bench");
+var { benchBranch, benchmarkRuntime } = require("./bench");
 
 module.exports = app => {
   app.log(`base branch: ${process.env.BASE_BRANCH}`);
@@ -10,7 +10,10 @@ module.exports = app => {
       return;
     }
 
-    let benchId = (commentText.split(" ")[1] || "import").trim();
+    // Capture `<action>` in `/bench <action> <extra>`
+    let action = commentText.split(" ").splice(1, 1).join(" ").trim();
+    // Capture all `<extra>` text in `/bench <action> <extra>`
+    let extra = commentText.split(" ").splice(2).join(" ").trim();
 
     const repo = context.payload.repository.name;
     const owner = context.payload.repository.owner.login;
@@ -27,10 +30,17 @@ module.exports = app => {
       repository: "https://github.com/paritytech/substrate",
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
-      id: benchId,
+      id: action,
+      pushToken: process.env.PUSH_TOKEN,
+      extra: extra,
     }
 
-    let report = await benchBranch(app, config);
+    let report;
+    if (action == "runtime") {
+      report = await benchmarkRuntime(app, config)
+    } else {
+      report = await benchBranch(app, config)
+    };
 
     if (report.error) {
       app.log(`error: ${report.stderr}`)

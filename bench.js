@@ -72,6 +72,7 @@ async function benchBranch(app, config) {
 
         var benchContext = new BenchContext(app, config);
         console.log(`Started benchmark "${benchConfig.title}."`);
+        shell.mkdir("git")
         shell.cd(cwd + "/git")
 
         var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
@@ -119,4 +120,144 @@ async function benchBranch(app, config) {
     }
 }
 
-module.exports = benchBranch;
+var RuntimeBenchmarkConfigs = {
+    "pallet": {
+        title: "Runtime Benchmarks Pallet",
+        branchCommand: [
+            'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
+            '--chain dev',
+            '--steps 50',
+            '--repeat 20',
+            '--extrinsic "*"',
+            '--raw',
+            '--execution=wasm',
+            '--wasm-execution=compiled',
+            '--output ./bin/node/runtime/src/weights',
+            '--header ./HEADER',
+            '--pallet',
+        ].join(' '),
+    },
+    "custom": {
+        title: "Runtime Benchmarks Custom",
+        branchCommand: 'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
+    }
+}
+
+function checkRuntimeBenchmarkCommand(command) {
+    let required = ["benchmark", "--pallet", "--extrinsic", "--execution", "--wasm-execution", "--steps", "--repeat", "--chain"];
+    let missing = [];
+    for (const flag of required) {
+        if (!command.includes(flag)) {
+            missing.push(flag);
+        }
+    }
+
+    return missing;
+}
+
+function checkAllowedCharacters(command) {
+    let banned = ["#", "&", "|", ";", ":"];
+    for (const token of banned) {
+        if (command.includes(token)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+async function benchmarkRuntime(app, config) {
+    app.log("Waiting our turn to run benchmark...")
+
+    const release = await mutex.acquire();
+
+    try {
+        if (config.extra.split(" ").length < 2) {
+            return errorResult(`Incomplete command.`)
+        }
+
+        let command = config.extra.split(" ")[0];
+        var benchConfig = RuntimeBenchmarkConfigs[command];
+        var extra = config.extra.split(" ").slice(1).join(" ").trim();
+
+        if (!checkAllowedCharacters(extra)) {
+            return errorResult(`Not allowed to use #&|;: in the command!`);
+        }
+
+        // Append extra flags to the end of the command
+        benchConfig.branchCommand += " " + extra;
+
+        let missing = checkRuntimeBenchmarkCommand(benchConfig.branchCommand);
+        let output = benchConfig.branchCommand.includes("--output");
+
+        if (missing.length > 0) {
+            return errorResult(`Missing required flags: ${missing.toString()}`)
+        }
+
+        var benchContext = new BenchContext(app, config);
+        console.log(`Started runtime benchmark "${benchConfig.title}."`);
+        shell.mkdir("git")
+        shell.cd(cwd + "/git")
+
+        var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
+        if (error) {
+            app.log("Git clone failed, probably directory exists...");
+        }
+
+        shell.cd(cwd + "/git/substrate");
+
+        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
+        if (error) return errorResult(stderr);
+
+        // Checkout the custom branch
+        var { error, stderr } = benchContext.runTask(`git checkout ${config.branch}`, `Checking out ${config.branch}...`);
+        if (error) {
+            app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
+        }
+
+        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`, `Resetting ${config.branch} hard...`);
+        if (error) return errorResult(stderr);
+
+        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
+
+        // Merge master branch
+        var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
+        if (error) return errorResult(stderr, "merge");
+        if (config.pushToken) {
+            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`, `Pushing merge with pushToken.`);
+        } else {
+            benchContext.runTask(`git push`, `Pushing merge.`);
+        }
+
+        var { error, stdout, stderr } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
+
+        // If `--output` is set, we commit the benchmark file to the repo
+        if (output) {
+            benchContext.runTask(`git add .`, `Adding new files.`);
+            benchContext.runTask(`git commit -m "${benchConfig.branchCommand}"`, `Committing changes.`);
+            if (config.pushToken) {
+                benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`, `Pushing commit with pushToken.`);
+            } else {
+                benchContext.runTask(`git push`, `Pushing commit.`);
+            }
+        }
+        let report = `Benchmark: **${benchConfig.title}**\n\n`
+            + benchConfig.branchCommand
+            + "\n\n<details>\n<summary>Results</summary>\n\n"
+            + (stdout ? stdout : stderr)
+            + "\n\n </details>";
+
+        return report;
+    }
+    catch (error) {
+        return errorResult(error.toString());
+    }
+    finally {
+        release();
+    }
+}
+
+module.exports = {
+    benchBranch: benchBranch,
+    benchmarkRuntime: benchmarkRuntime,
+};
