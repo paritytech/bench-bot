@@ -129,7 +129,6 @@ var RuntimeBenchmarkConfigs = {
             '--steps 50',
             '--repeat 20',
             '--extrinsic "*"',
-            '--raw',
             '--execution=wasm',
             '--wasm-execution=compiled',
             '--output ./bin/node/runtime/src/weights',
