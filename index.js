@@ -22,7 +22,7 @@ module.exports = app => {
     let pr = await context.github.pulls.get({ owner, repo, pull_number });
     const branchName = pr.data.head.ref;
     app.log(`branch: ${branchName}`);
-    const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName} (vs ${process.env.BASE_BRANCH})\nAction: ${action}\nExtra: ${extra}\n\n Comment will be updated.` });
+    const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName} (vs ${process.env.BASE_BRANCH})\n\n Comment will be updated.` });
     const issue_comment = await context.github.issues.createComment(issueComment);
     const comment_id = issue_comment.data.id;
 
