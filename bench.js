@@ -132,6 +132,7 @@ var RuntimeBenchmarkConfigs = {
             '--raw',
             '--execution=wasm',
             '--wasm-execution=compiled',
+            '--heap-pages 4096',
             '--output ./bin/node/runtime/src/weights',
             '--header ./HEADER',
             '--pallet',
