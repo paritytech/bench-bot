@@ -233,7 +233,9 @@ async function benchmarkRuntime(app, config) {
 
         // If `--output` is set, we commit the benchmark file to the repo
         if (output) {
-            benchContext.runTask(`git add .`, `Adding new files.`);
+            const regex = /--output(?:=|\s+)(".+?"|\S+)/;
+            const path = branchCommand.match(regex)[1];
+            benchContext.runTask(`git add ${path}`, `Adding new files.`);
             benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
             if (config.pushToken) {
                 benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`, `Pushing commit with pushToken.`);
