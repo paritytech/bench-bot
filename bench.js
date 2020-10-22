@@ -129,10 +129,9 @@ var RuntimeBenchmarkConfigs = {
             '--steps 50',
             '--repeat 20',
             '--extrinsic "*"',
-            '--raw',
             '--execution=wasm',
             '--wasm-execution=compiled',
-            '--heap-pages 4096',
+            '--heap-pages=4096',
             '--output ./bin/node/runtime/src/weights',
             '--header ./HEADER',
             '--pallet',
@@ -186,10 +185,10 @@ async function benchmarkRuntime(app, config) {
         }
 
         // Append extra flags to the end of the command
-        benchConfig.branchCommand += " " + extra;
+        let branchCommand = benchConfig.branchCommand + " " + extra;
 
-        let missing = checkRuntimeBenchmarkCommand(benchConfig.branchCommand);
-        let output = benchConfig.branchCommand.includes("--output");
+        let missing = checkRuntimeBenchmarkCommand(branchCommand);
+        let output = branchCommand.includes("--output");
 
         if (missing.length > 0) {
             return errorResult(`Missing required flags: ${missing.toString()}`)
@@ -230,14 +229,14 @@ async function benchmarkRuntime(app, config) {
             benchContext.runTask(`git push`, `Pushing merge.`);
         }
 
-        var { error, stdout, stderr } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
+        var { error, stdout, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
 
         // If `--output` is set, we commit the benchmark file to the repo
         if (output) {
             const regex = /--output(?:=|\s+)(".+?"|\S+)/;
-            const path = benchConfig.branchCommand.match(regex)[1];
+            const path = branchCommand.match(regex)[1];
             benchContext.runTask(`git add ${path}`, `Adding new files.`);
-            benchContext.runTask(`git commit -m "${benchConfig.branchCommand}"`, `Committing changes.`);
+            benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
             if (config.pushToken) {
                 benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`, `Pushing commit with pushToken.`);
             } else {
@@ -245,7 +244,7 @@ async function benchmarkRuntime(app, config) {
             }
         }
         let report = `Benchmark: **${benchConfig.title}**\n\n`
-            + benchConfig.branchCommand
+            + branchCommand
             + "\n\n<details>\n<summary>Results</summary>\n\n"
             + (stdout ? stdout : stderr)
             + "\n\n </details>";
