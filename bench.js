@@ -124,17 +124,21 @@ var RuntimeBenchmarkConfigs = {
     "pallet": {
         title: "Runtime Benchmarks Pallet",
         branchCommand: [
-            'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
-            '--chain dev',
-            '--steps 50',
-            '--repeat 20',
-            '--extrinsic "*"',
+            'cargo run --release',
+            '--features=runtime-benchmarks',
+            '--manifest-path=bin/node/cli/Cargo.toml',
+            '--',
+            'benchmark',
+            '--chain=dev',
+            '--steps=50',
+            '--repeat=20',
+            '--pallet={pallet_name}',
+            '--extrinsic="*"',
             '--execution=wasm',
             '--wasm-execution=compiled',
             '--heap-pages=4096',
-            '--output ./bin/node/runtime/src/weights',
-            '--header ./HEADER',
-            '--pallet',
+            '--output=./frame/{pallet_folder}/src/weights.rs',
+            '--template=./.maintain/frame-weight-template.hbs',
         ].join(' '),
     },
     "custom": {
@@ -185,7 +189,18 @@ async function benchmarkRuntime(app, config) {
         }
 
         // Append extra flags to the end of the command
-        let branchCommand = benchConfig.branchCommand + " " + extra;
+        let branchCommand = benchConfig.branchCommand;
+        if (command == "custom") {
+            // extra here should just be raw arguments to add to the command
+            branchCommand += " " + extra;
+        } else {
+            // extra here should be the name of a pallet
+            branchCommand = branchCommand.replace("{pallet_name}", extra);
+            // pallet folder should be just the name of the pallet, without the leading
+            // "pallet_" or "frame_", then separated with "-"
+            let palletFolder = extra.split("_").slice(1).join("-").trim();
+            branchCommand = branchCommand.replace("{pallet_folder}", palletFolder);
+        }
 
         let missing = checkRuntimeBenchmarkCommand(branchCommand);
         let output = branchCommand.includes("--output");
