@@ -67,6 +67,10 @@ async function benchBranch(app, config) {
     const release = await mutex.acquire();
 
     try {
+        if (config.repo != "substrate") {
+            return errorResult("Node benchmarks only available on Substrate.")
+        }
+
         var benchConfig = BenchConfigs[config.id || "import"];
         collector = new libCollector.Collector();
 
@@ -75,12 +79,12 @@ async function benchBranch(app, config) {
         shell.mkdir("git")
         shell.cd(cwd + "/git")
 
-        var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
+        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
         if (error) {
             app.log("Git clone failed, probably directory exists...");
         }
 
-        shell.cd(cwd + "/git/substrate");
+        shell.cd(cwd + `/git/${config.repo}`);
 
         var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
         if (error) return errorResult(stderr);
@@ -120,9 +124,29 @@ async function benchBranch(app, config) {
     }
 }
 
-var RuntimeBenchmarkConfigs = {
+var SubstrateRuntimeBenchmarkConfigs = {
     "pallet": {
-        title: "Runtime Benchmarks Pallet",
+        title: "Benchmark Runtime Pallet",
+        branchCommand: [
+            'cargo run --release',
+            '--features=runtime-benchmarks',
+            '--manifest-path=bin/node/cli/Cargo.toml',
+            '--',
+            'benchmark',
+            '--chain=dev',
+            '--steps=50',
+            '--repeat=20',
+            '--pallet={pallet_name}',
+            '--extrinsic="*"',
+            '--execution=wasm',
+            '--wasm-execution=compiled',
+            '--heap-pages=4096',
+            '--output=./frame/{pallet_folder}/src/weights.rs',
+            '--template=./.maintain/frame-weight-template.hbs',
+        ].join(' '),
+    },
+    "substrate": {
+        title: "Benchmark Runtime Substrate Pallet",
         branchCommand: [
             'cargo run --release',
             '--features=runtime-benchmarks',
@@ -142,8 +166,91 @@ var RuntimeBenchmarkConfigs = {
         ].join(' '),
     },
     "custom": {
-        title: "Runtime Benchmarks Custom",
+        title: "Benchmark Runtime Custom",
         branchCommand: 'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
+    }
+}
+
+var PolkadotRuntimeBenchmarkConfigs = {
+    "pallet": {
+        title: "Benchmark Runtime Pallet",
+        branchCommand: [
+            'cargo run --release',
+            '--features=runtime-benchmarks',
+            '--',
+            'benchmark',
+            '--chain=polkadot-dev',
+            '--steps=50',
+            '--repeat=20',
+            '--pallet={pallet_name}',
+            '--extrinsic="*"',
+            '--execution=wasm',
+            '--wasm-execution=compiled',
+            '--heap-pages=4096',
+            '--header=./file_header.txt',
+            '--output=./runtime/polkadot/src/weights/',
+        ].join(' '),
+    },
+    "polkadot": {
+        title: "Benchmark Runtime Polkadot Pallet",
+        branchCommand: [
+            'cargo run --release',
+            '--features=runtime-benchmarks',
+            '--',
+            'benchmark',
+            '--chain=polkadot-dev',
+            '--steps=50',
+            '--repeat=20',
+            '--pallet={pallet_name}',
+            '--extrinsic="*"',
+            '--execution=wasm',
+            '--wasm-execution=compiled',
+            '--heap-pages=4096',
+            '--header=./file_header.txt',
+            '--output=./runtime/polkadot/src/weights/',
+        ].join(' '),
+    },
+    "kusama": {
+        title: "Benchmark Runtime Kusama Pallet",
+        branchCommand: [
+            'cargo run --release',
+            '--features=runtime-benchmarks',
+            '--',
+            'benchmark',
+            '--chain=kusama-dev',
+            '--steps=50',
+            '--repeat=20',
+            '--pallet={pallet_name}',
+            '--extrinsic="*"',
+            '--execution=wasm',
+            '--wasm-execution=compiled',
+            '--heap-pages=4096',
+            '--header=./file_header.txt',
+            '--output=./runtime/kusama/src/weights/',
+        ].join(' '),
+    },
+    "westend": {
+        title: "Benchmark Runtime Westend Pallet",
+        branchCommand: [
+            'cargo run --release',
+            '--features=runtime-benchmarks',
+            '--',
+            'benchmark',
+            '--chain=westend-dev',
+            '--steps=50',
+            '--repeat=20',
+            '--pallet={pallet_name}',
+            '--extrinsic="*"',
+            '--execution=wasm',
+            '--wasm-execution=compiled',
+            '--heap-pages=4096',
+            '--header=./file_header.txt',
+            '--output=./runtime/westend/src/weights/',
+        ].join(' '),
+    },
+    "custom": {
+        title: "Benchmark Runtime Custom",
+        branchCommand: 'cargo run --release --features runtime-benchmarks -- benchmark',
     }
 }
 
@@ -181,7 +288,16 @@ async function benchmarkRuntime(app, config) {
         }
 
         let command = config.extra.split(" ")[0];
-        var benchConfig = RuntimeBenchmarkConfigs[command];
+
+        var benchConfig;
+        if (config.repo == "substrate") {
+            benchConfig = SubstrateRuntimeBenchmarkConfigs[command];
+        } else if (config.repo == "polkadot") {
+            benchConfig = PolkadotRuntimeBenchmarkConfigs[command];
+        } else {
+            return errorResult(`${config.repo} repo is not supported.`)
+        }
+
         var extra = config.extra.split(" ").slice(1).join(" ").trim();
 
         if (!checkAllowedCharacters(extra)) {
@@ -214,12 +330,12 @@ async function benchmarkRuntime(app, config) {
         shell.mkdir("git")
         shell.cd(cwd + "/git")
 
-        var { error } = benchContext.runTask(`git clone ${config.repository}`, "Cloning git repository...");
+        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
         if (error) {
             app.log("Git clone failed, probably directory exists...");
         }
 
-        shell.cd(cwd + "/git/substrate");
+        shell.cd(cwd + `/git/${config.repo}`);
 
         var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
         if (error) return errorResult(stderr);
@@ -239,7 +355,7 @@ async function benchmarkRuntime(app, config) {
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
         if (error) return errorResult(stderr, "merge");
         if (config.pushToken) {
-            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`, `Pushing merge with pushToken.`);
+            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
         } else {
             benchContext.runTask(`git push`, `Pushing merge.`);
         }
@@ -253,7 +369,7 @@ async function benchmarkRuntime(app, config) {
             benchContext.runTask(`git add ${path}`, `Adding new files.`);
             benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
             if (config.pushToken) {
-                benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/substrate.git HEAD`, `Pushing commit with pushToken.`);
+                benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
             } else {
                 benchContext.runTask(`git push`, `Pushing commit.`);
             }
