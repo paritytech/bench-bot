@@ -37,13 +37,7 @@ module.exports = app => {
     }
 
     let report;
-    if (
-      action == "runtime" ||
-      action == "substrate" ||
-      action == "polkadot" ||
-      action == "kusama" ||
-      action == "westend"
-    ) {
+    if (action == "runtime" ) {
       report = await benchmarkRuntime(app, config)
     } else {
       report = await benchBranch(app, config)
