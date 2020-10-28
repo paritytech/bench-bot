@@ -4,10 +4,13 @@ require("dotenv").config();
 console.log(`BASE_BRANCH=${process.env.BASE_BRANCH}`);
 
 let config = {
-    repository: "https://github.com/paritytech/substrate",
+    owner: "paritytech",
+    repo: "substrate",
     branch: "nv-dynamic-extensions",
     baseBranch: process.env.BASE_BRANCH,
-    id: "ed25519"
+    id: "ed25519",
+    pushToken: null,
+    extra: null,
 }
 
 benchBranch(console, config).then(report => {

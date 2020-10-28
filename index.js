@@ -19,12 +19,6 @@ module.exports = app => {
     const owner = context.payload.repository.owner.login;
     const pull_number = context.payload.issue.number;
 
-    console.log(repo, owner, pull_number);
-
-    if (repo != "substrate") {
-      return;
-    }
-
     let pr = await context.github.pulls.get({ owner, repo, pull_number });
     const branchName = pr.data.head.ref;
     app.log(`branch: ${branchName}`);
@@ -33,7 +27,8 @@ module.exports = app => {
     const comment_id = issue_comment.data.id;
 
     let config = {
-      repository: "https://github.com/paritytech/substrate",
+      owner: owner,
+      repo: repo,
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
       id: action,
