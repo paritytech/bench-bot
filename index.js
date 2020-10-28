@@ -37,7 +37,7 @@ module.exports = app => {
     }
 
     let report;
-    if (action == "runtime" ) {
+    if (action == "runtime") {
       report = await benchmarkRuntime(app, config)
     } else {
       report = await benchBranch(app, config)
