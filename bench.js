@@ -357,7 +357,10 @@ async function benchmarkRuntime(app, config) {
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
         if (error) return errorResult(stderr, "merge");
         if (config.pushToken) {
-            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
+            var { error, stderr } = benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
+            if (error) {
+                app.log(`Push error: ${stderr}`);
+            }
         } else {
             benchContext.runTask(`git push --set-upstream origin pr/${config.pull_number}`, `Pushing merge.`);
         }
@@ -371,7 +374,10 @@ async function benchmarkRuntime(app, config) {
             benchContext.runTask(`git add ${path}`, `Adding new files.`);
             benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
             if (config.pushToken) {
-                benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
+                var { error, stderr } = benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
+                if (error) {
+                    app.log(`Push error: ${stderr}`);
+                }
             } else {
                 benchContext.runTask(`git push --set-upstream origin pr/${config.pull_number}`, `Pushing commit.`);
             }
