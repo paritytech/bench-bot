@@ -337,17 +337,19 @@ async function benchmarkRuntime(app, config) {
 
         shell.cd(cwd + `/git/${config.repo}`);
 
-        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
-        if (error) return errorResult(stderr);
+        var { error, stderr } = benchContext.runTask(`git fetch -u origin pull/${config.pull_number}/head:pr/${config.pull_number}`, `Fetching pr/${config.pull_number}...`);
+        if (error) {
+            app.log(`Git fetch error: ${stderr}`)
+        };
 
         // Checkout the custom branch
-        var { error, stderr } = benchContext.runTask(`git checkout ${config.branch}`, `Checking out ${config.branch}...`);
-        if (error) {
-            app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
-        }
-
-        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`, `Resetting ${config.branch} hard...`);
+        var { error, stderr } = benchContext.runTask(`git checkout pr/${config.pull_number}`, `Checkout pr/${config.pull_number}...`);
         if (error) return errorResult(stderr);
+
+        var { error, stderr } = benchContext.runTask(`git reset --hard`, `Resetting hard...`);
+        if (error) {
+            app.log(`Git reset error: ${stderr}`)
+        };
 
         benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
 
@@ -357,7 +359,7 @@ async function benchmarkRuntime(app, config) {
         if (config.pushToken) {
             benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
         } else {
-            benchContext.runTask(`git push`, `Pushing merge.`);
+            benchContext.runTask(`git push --set-upstream origin pr/${config.pull_number}`, `Pushing merge.`);
         }
 
         var { error, stdout, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
@@ -371,7 +373,7 @@ async function benchmarkRuntime(app, config) {
             if (config.pushToken) {
                 benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
             } else {
-                benchContext.runTask(`git push`, `Pushing commit.`);
+                benchContext.runTask(`git push --set-upstream origin pr/${config.pull_number}`, `Pushing commit.`);
             }
         }
         let report = `Benchmark: **${benchConfig.title}**\n\n`

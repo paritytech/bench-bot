@@ -29,6 +29,7 @@ module.exports = app => {
     let config = {
       owner: owner,
       repo: repo,
+      pull_number: pull_number,
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
       id: action,
