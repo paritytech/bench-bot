@@ -267,7 +267,7 @@ function checkRuntimeBenchmarkCommand(command) {
 }
 
 function checkAllowedCharacters(command) {
-    let banned = ["#", "&", "|", ";", ":"];
+    let banned = ["#", "&", "|", ";"];
     for (const token of banned) {
         if (command.includes(token)) {
             return false;
@@ -301,7 +301,7 @@ async function benchmarkRuntime(app, config) {
         var extra = config.extra.split(" ").slice(1).join(" ").trim();
 
         if (!checkAllowedCharacters(extra)) {
-            return errorResult(`Not allowed to use #&|;: in the command!`);
+            return errorResult(`Not allowed to use #&|; in the command!`);
         }
 
         // Append extra flags to the end of the command
