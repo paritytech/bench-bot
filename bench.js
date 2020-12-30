@@ -188,7 +188,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
             '--wasm-execution=compiled',
             '--heap-pages=4096',
             '--header=./file_header.txt',
-            '--output=./runtime/polkadot/src/weights/',
+            '--output=./runtime/polkadot/src/weights/{output_file}',
         ].join(' '),
     },
     "polkadot": {
@@ -207,7 +207,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
             '--wasm-execution=compiled',
             '--heap-pages=4096',
             '--header=./file_header.txt',
-            '--output=./runtime/polkadot/src/weights/',
+            '--output=./runtime/polkadot/src/weights/{output_file}',
         ].join(' '),
     },
     "kusama": {
@@ -226,7 +226,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
             '--wasm-execution=compiled',
             '--heap-pages=4096',
             '--header=./file_header.txt',
-            '--output=./runtime/kusama/src/weights/',
+            '--output=./runtime/kusama/src/weights/{output_file}',
         ].join(' '),
     },
     "westend": {
@@ -245,7 +245,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
             '--wasm-execution=compiled',
             '--heap-pages=4096',
             '--header=./file_header.txt',
-            '--output=./runtime/westend/src/weights/',
+            '--output=./runtime/westend/src/weights/{output_file}',
         ].join(' '),
     },
     "custom": {
@@ -312,6 +312,9 @@ async function benchmarkRuntime(app, config) {
         } else {
             // extra here should be the name of a pallet
             branchCommand = branchCommand.replace("{pallet_name}", extra);
+            // custom output file name so that pallets with path don't cause issues
+            let outputFile = extra.contains("::") ? extra.replace("::", "_") + ".rs" : '';
+            branchCommand = branchCommand.replace("{output_file}", outputFile);
             // pallet folder should be just the name of the pallet, without the leading
             // "pallet_" or "frame_", then separated with "-"
             let palletFolder = extra.split("_").slice(1).join("-").trim();
