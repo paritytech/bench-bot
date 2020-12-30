@@ -313,7 +313,7 @@ async function benchmarkRuntime(app, config) {
             // extra here should be the name of a pallet
             branchCommand = branchCommand.replace("{pallet_name}", extra);
             // custom output file name so that pallets with path don't cause issues
-            let outputFile = extra.contains("::") ? extra.replace("::", "_") + ".rs" : '';
+            let outputFile = extra.includes("::") ? extra.replace("::", "_") + ".rs" : '';
             branchCommand = branchCommand.replace("{output_file}", outputFile);
             // pallet folder should be just the name of the pallet, without the leading
             // "pallet_" or "frame_", then separated with "-"
