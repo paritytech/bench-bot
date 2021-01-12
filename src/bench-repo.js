@@ -25,47 +25,35 @@ const CustomRuntimeBenchmarkConfigs = {
     },
 }
 
-function getManifestPath(){
-    return process.env.MANIFEST_PATH || 'node/Cargo.toml';
-}
-
-function getOutputTemplate(){
-    return process.env.BENCH_PALLET_OUTPUT_FILE || 'weights.rs';
-}
-
-function getHBSTemplate(){
-    return process.env.BENCH_PALLET_HBS_TEMPLATE || '.maintain/pallet-weight-template.hbs';
-}
-
 async function benchRepo(app, config){
     let command = config.extra.split(" ")[0];
 
-    const supported_commands = Object.keys(CustomRuntimeBenchmarkConfigs);
+    const supportedCommands = Object.keys(CustomRuntimeBenchmarkConfigs);
 
-    if (!supported_commands.includes(command)){
+    if (!supportedCommands.includes(command)){
         return errorResult(`${command} is not supported command`)
     }
 
-    let pallet_name = config.extra.split(" ").slice(1).join(" ").trim();
+    let palletName = config.extra.split(" ").slice(1).join(" ").trim();
 
-    if (!checkAllowedCharacters(pallet_name)) {
+    if (!checkAllowedCharacters(palletName)) {
         return errorResult(`Not allowed to use #&|; in the command!`);
     }
 
-    let manifest_path = getManifestPath();
-    let bench_output = getOutputTemplate();
-    let hbs_template = getHBSTemplate();
+    const manifestPath = process.env.MANIFEST_PATH || 'node/Cargo.toml';
+    const benchOutput = process.env.BENCH_PALLET_OUTPUT_FILE || 'weights.rs';
+    const hbsTemplate = process.env.BENCH_PALLET_HBS_TEMPLATE || '.maintain/pallet-weight-template.hbs';
 
     let commandConfig = CustomRuntimeBenchmarkConfigs[command];
 
     let cargoCommand = commandConfig.branchCommand;
 
-    cargoCommand = cargoCommand.replace("{manifest_path}", manifest_path);
-    cargoCommand = cargoCommand.replace("{bench_output}", bench_output);
-    cargoCommand = cargoCommand.replace("{hbs_template}", hbs_template);
-    cargoCommand = cargoCommand.replace("{pallet_name}", pallet_name);
+    cargoCommand = cargoCommand.replace("{manifest_path}", manifestPath);
+    cargoCommand = cargoCommand.replace("{bench_output}", benchOutput);
+    cargoCommand = cargoCommand.replace("{hbs_template}", hbsTemplate);
+    cargoCommand = cargoCommand.replace("{pallet_name}", palletName);
 
-    let missing = checkRuntimeBenchmarkCommand(cargoCommand);
+    const missing = checkRuntimeBenchmarkCommand(cargoCommand);
 
     if (missing.length > 0) {
         return errorResult(`Missing required flags: ${missing.toString()}`)
@@ -73,18 +61,18 @@ async function benchRepo(app, config){
 
     config["title"] = commandConfig.title;
 
-    let benchContext = new BenchContext(app, config);
+    const benchContext = new BenchContext(app, config);
 
-    benchContext.pallet_name = pallet_name;
-    benchContext.bench_output = bench_output;
+    benchContext.palletName = palletName;
+    benchContext.benchOutput = benchOutput;
 
     return runBench(cargoCommand, benchContext);
 }
 
-async function clone_and_sync(context){
-    let github_repo = `https://github.com/${context.config.owner}/${context.config.repo}`;
+async function cloneAndSync(context){
+    let githubRepo = `https://github.com/${context.config.owner}/${context.config.repo}`;
 
-    var {error} = context.runTask(`git clone ${github_repo} ${context.temp_dir}`, `Cloning git repository ${github_repo} ...`, false);
+    var {error} = context.runTask(`git clone ${githubRepo} ${context.temp_dir}`, `Cloning git repository ${githubRepo} ...`, false);
 
     if (error) {
         context.app.log("Git clone failed, probably directory exists...");
@@ -126,10 +114,10 @@ async function runBench(command, context){
 
     context.createTempDir();
 
-    let git_result = await clone_and_sync(context);
+    let gitResult = await cloneAndSync(context);
 
-    if (git_result.error){
-        return git_result;
+    if (gitResult.error){
+        return gitResult;
     }
 
     let { stdout, stderr, error } = context.runTask(command, `Benching branch: ${context.config.branch}...`);
@@ -142,14 +130,14 @@ async function runBench(command, context){
 
     // If `--output` is set, we commit the benchmark file to the repo
     if (output) {
-        let palletFolder = context.pallet_name.split('_').join('-').trim();
+        let palletFolder = context.palletName.split('_').join('-').trim();
         let weightsPath = `pallets/${palletFolder}/src/weights.rs`;
-        let cmd = `mv ${context.bench_output} ${weightsPath}`;
+        let cmd = `mv ${context.benchOutput} ${weightsPath}`;
 
         context.runTask(cmd);
 
         context.runTask(`git add ${weightsPath}`, `Adding new files.`);
-        context.runTask(`git commit -m "Weights update for ${context.pallet_name} pallet"`, `Committing changes.`);
+        context.runTask(`git commit -m "Weights update for ${context.palletName} pallet"`, `Committing changes.`);
 
         if (config.pushToken) {
             context.runTask(`git push https://${context.config.pushToken}@github.com/${context.config.owner}/${context.config.repo}.git HEAD`, `Pushing commit with pushToken.`);
