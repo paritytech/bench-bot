@@ -5,7 +5,9 @@ module.exports = app => {
   app.log(`base branch: ${process.env.BASE_BRANCH}`);
 
   app.on('issue_comment', async context => {
+
     let commentText = context.payload.comment.body;
+
     if (!commentText.startsWith("/bench")) {
       return;
     }
@@ -21,7 +23,9 @@ module.exports = app => {
 
     let pr = await context.github.pulls.get({ owner, repo, pull_number });
     const branchName = pr.data.head.ref;
+
     app.log(`branch: ${branchName}`);
+
     const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName} (vs ${process.env.BASE_BRANCH})\n\n Comment will be updated.` });
     const issue_comment = await context.github.issues.createComment(issueComment);
     const comment_id = issue_comment.data.id;
@@ -36,16 +40,24 @@ module.exports = app => {
       extra: extra,
     }
 
+    // Support to run the command on remote machine
+    if (process.env.REMOTE_HOST !== undefined) {
+      config.remote = { host: process.env.REMOTE_HOST,
+        user: process.env.REMOTE_USER}
+    }
+
     let report;
-    if (action == "runtime") {
+    if (action === "runtime") {
       report = await benchmarkRuntime(app, config)
     } else {
       report = await benchBranch(app, config)
-    };
+    }
 
     if (report.error) {
+
       app.log(`error: ${report.stderr}`)
-      if (report.step != "merge") {
+
+      if (report.step !== "merge") {
         context.github.issues.updateComment({
           owner, repo, comment_id,
           body: `Error running benchmark: **${branchName}**\n\n<details><summary>stdout</summary>${report.stderr}</details>`,
@@ -58,12 +70,11 @@ module.exports = app => {
       }
     } else {
       app.log(`report: ${report}`);
+
       context.github.issues.updateComment({
         owner, repo, comment_id,
         body: `Finished benchmark for branch: **${branchName}**\n\n${report}`,
       });
     }
-
-    return;
   })
 }

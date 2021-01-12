@@ -10,6 +10,7 @@ const mutex = new Mutex();
 var shell = require('shelljs');
 
 var libCollector = require("./collector");
+const {benchRepo} = require("./src/bench-repo");
 
 function BenchContext(app, config) {
     var self = this;
@@ -22,7 +23,7 @@ function BenchContext(app, config) {
         const { stdout, stderr, code } = shell.exec(cmd, { silent: true });
         var error = false;
 
-        if (code != 0) {
+        if (code !== 0) {
             app.log(`ops.. Something went wrong (error code ${code})`);
             app.log(`stderr: ${stderr}`);
             error = true;
@@ -75,7 +76,7 @@ async function benchBranch(app, config) {
         collector = new libCollector.Collector();
 
         var benchContext = new BenchContext(app, config);
-        console.log(`Started benchmark "${benchConfig.title}."`);
+        app.log(`Started benchmark "${benchConfig.title}."`);
         shell.mkdir("git")
         shell.cd(cwd + "/git")
 
@@ -295,7 +296,8 @@ async function benchmarkRuntime(app, config) {
         } else if (config.repo == "polkadot") {
             benchConfig = PolkadotRuntimeBenchmarkConfigs[command];
         } else {
-            return errorResult(`${config.repo} repo is not supported.`)
+            app.log(`custom repo ${config.repo}`)
+            return benchRepo(app, config)
         }
 
         var extra = config.extra.split(" ").slice(1).join(" ").trim();
@@ -326,7 +328,7 @@ async function benchmarkRuntime(app, config) {
         }
 
         var benchContext = new BenchContext(app, config);
-        console.log(`Started runtime benchmark "${benchConfig.title}."`);
+        app.log(`Started runtime benchmark "${benchConfig.title}."`);
         shell.mkdir("git")
         shell.cd(cwd + "/git")
 
