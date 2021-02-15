@@ -254,6 +254,35 @@ var PolkadotRuntimeBenchmarkConfigs = {
     }
 }
 
+var AcalaRuntimeBenchmarkConfigs = {
+    "pallet": {
+        title: "Benchmark Runtime Pallet",
+        preparationCommand: "make init",
+        branchCommand: [
+            'cargo run --release',
+            '--bin=acala',
+            '--features=runtime-benchmarks',
+            '--',
+            'benchmark',
+            '--chain=dev',
+            '--steps=50',
+            '--repeat=20',
+            '--pallet={pallet_name}',
+            '--extrinsic="*"',
+            '--execution=wasm',
+            '--wasm-execution=compiled',
+            '--heap-pages=4096',
+            // '--header=./file_header.txt',
+            '--output=./modules/{pallet_folder}/src/default_weight.rs',
+        ].join(' '),
+    },
+    "custom": {
+        title: "Benchmark Runtime Custom",
+        preparationCommand: "make init",
+        branchCommand: 'cargo run --release --bin acala --features runtime-benchmarks -- benchmark',
+    }
+}
+
 function checkRuntimeBenchmarkCommand(command) {
     let required = ["benchmark", "--pallet", "--extrinsic", "--execution", "--wasm-execution", "--steps", "--repeat", "--chain"];
     let missing = [];
@@ -294,6 +323,8 @@ async function benchmarkRuntime(app, config) {
             benchConfig = SubstrateRuntimeBenchmarkConfigs[command];
         } else if (config.repo == "polkadot") {
             benchConfig = PolkadotRuntimeBenchmarkConfigs[command];
+        } else if (config.repo.toLowerCase() == "acala") {
+            benchConfig = AcalaRuntimeBenchmarkConfigs[command];
         } else {
             return errorResult(`${config.repo} repo is not supported.`)
         }
@@ -327,7 +358,7 @@ async function benchmarkRuntime(app, config) {
 
         var benchContext = new BenchContext(app, config);
         console.log(`Started runtime benchmark "${benchConfig.title}."`);
-        shell.mkdir("git")
+        shell.mkdir("-p", "git")
         shell.cd(cwd + "/git")
 
         var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
@@ -355,7 +386,7 @@ async function benchmarkRuntime(app, config) {
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
         if (error) return errorResult(stderr, "merge");
         if (config.pushToken) {
-            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
+            benchContext.runTask(`git push https://${config.pushToken}@github.com/${config.owner}/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
         } else {
             benchContext.runTask(`git push`, `Pushing merge.`);
         }
@@ -369,7 +400,7 @@ async function benchmarkRuntime(app, config) {
             benchContext.runTask(`git add ${path}`, `Adding new files.`);
             benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
             if (config.pushToken) {
-                benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
+                benchContext.runTask(`git push https://${config.pushToken}@github.com/${config.owner}/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
             } else {
                 benchContext.runTask(`git push`, `Pushing commit.`);
             }

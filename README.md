@@ -1,10 +1,8 @@
-# bench-bot
+# acala-bench-bot
 
 ## Benchmarking bot
 
-This is a substrate-only bot at the moment.
-
-## How To
+## Setup on your local machine
 
 1. `yarn && yarn start`
 
@@ -14,16 +12,16 @@ This is a substrate-only bot at the moment.
 
 4. Create a PR
 
-5. Post a comment `/bench <action>`, for example `/bench import`
+5. Post a comment `/bench <action> <extra>`, for example `/bench runtime pallet module_currencies`
 
 ## Configuring
 
-There should be .env file in the root:
+There should be .env file in the root (see .env.example):
 
 ```
 APP_ID=<git hub app id>
 WEBHOOK_SECRET=<github app secret - REQUIRED!>
-PRIVATE_KEY_PATH=<path the the private key of the github app>
+PRIVATE_KEY_PATH=<path the the private key of the github app or PRIVATE_KEY=(replace new line with '\n')>
 WEBHOOK_PROXY_URL=<web hook url (like https://smee.io), not required>
 ```
 

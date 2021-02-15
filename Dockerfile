@@ -6,8 +6,8 @@ WORKDIR /app
 RUN curl https://getsubstrate.io -sSf | /bin/bash -s -- --fast
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN git config --global user.name "Parity Bot"
-RUN git config --global user.email admin@parity.io
+RUN git config --global user.name "Acala Benchmarking Bot"
+RUN git config --global user.email hello@acala.network
 
 RUN yarn
 CMD yarn start
