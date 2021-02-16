@@ -12,7 +12,7 @@
 
 4. Create a PR
 
-5. Post a comment `/bench <action> <extra>`, for example `/bench runtime pallet module_currencies`
+5. Post a comment `/bench <action> <extra>`, for example `/bench runtime module module_currencies`
 
 ## Configuring
 
