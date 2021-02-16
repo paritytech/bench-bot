@@ -272,8 +272,8 @@ var AcalaRuntimeBenchmarkConfigs = {
             '--execution=wasm',
             '--wasm-execution=compiled',
             '--heap-pages=4096',
-            // '--header=./file_header.txt',
-            '--output=./modules/{pallet_folder}/src/default_weight.rs',
+            '--output=./modules/{pallet_folder}/src/weights.rs',
+            '--template=../../module-weight-template.hbs',
         ].join(' '),
     },
     "custom": {
