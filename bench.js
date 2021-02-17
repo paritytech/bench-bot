@@ -97,7 +97,7 @@ async function benchBranch(app, config) {
         var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.baseBranch}`, `Resetting ${config.baseBranch} hard...`);
         if (error) return errorResult(stderr);
 
-        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
+        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand, 'Preparing...');
 
         var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
         if (error) return errorResult(stderr);
@@ -254,6 +254,15 @@ var PolkadotRuntimeBenchmarkConfigs = {
     }
 }
 
+/**
+ * {
+ *      [task]: {
+ *          title: "task string",
+ *          preparationCommand: "any setup command before benchmark",
+ *          branchCommand: "benchmark command"
+ *      }
+ * }
+ */
 var AcalaRuntimeBenchmarkConfigs = {
     "module": {
         title: "Benchmark Runtime Module",
@@ -379,20 +388,22 @@ async function benchmarkRuntime(app, config) {
             return errorResult(`Incomplete command.`)
         }
 
-        let command = config.extra.split(" ")[0];
+        // Capture `<task>` in `<task> <extra>`
+        let [task, ...rest] = config.extra.split(" ");
+
+        // Rest is `<extra>`
+        var extra = rest.join(" ").trim();
 
         var benchConfig;
-        if (config.repo == "substrate") {
-            benchConfig = SubstrateRuntimeBenchmarkConfigs[command];
-        } else if (config.repo == "polkadot") {
-            benchConfig = PolkadotRuntimeBenchmarkConfigs[command];
-        } else if (config.repo.toLowerCase() == "acala") {
-            benchConfig = AcalaRuntimeBenchmarkConfigs[command];
+        if (config.repo === "substrate") {
+            benchConfig = SubstrateRuntimeBenchmarkConfigs[task];
+        } else if (config.repo === "polkadot") {
+            benchConfig = PolkadotRuntimeBenchmarkConfigs[task];
+        } else if (config.repo.toLowerCase() === "acala") {
+            benchConfig = AcalaRuntimeBenchmarkConfigs[task];
         } else {
             return errorResult(`${config.repo} repo is not supported.`)
         }
-
-        var extra = config.extra.split(" ").slice(1).join(" ").trim();
 
         if (!checkAllowedCharacters(extra)) {
             return errorResult(`Not allowed to use #&|; in the command!`);
@@ -400,7 +411,7 @@ async function benchmarkRuntime(app, config) {
 
         // Append extra flags to the end of the command
         let branchCommand = benchConfig.branchCommand;
-        if (command == "custom") {
+        if (task == "custom") {
             // extra here should just be raw arguments to add to the command
             branchCommand += " " + extra;
         } else {
@@ -443,7 +454,7 @@ async function benchmarkRuntime(app, config) {
         var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`, `Resetting ${config.branch} hard...`);
         if (error) return errorResult(stderr);
 
-        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
+        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand, 'Preparing...');
 
         // Merge master branch
         var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);

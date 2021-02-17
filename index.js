@@ -6,14 +6,16 @@ module.exports = app => {
 
   app.on('issue_comment', async context => {
     let commentText = context.payload.comment.body;
-    if (!commentText.startsWith("/bench")) {
+
+    const triggerCommand = "/bench";
+    if (!commentText.startsWith(triggerCommand)) {
       return;
     }
 
     // Capture `<action>` in `/bench <action> <extra>`
-    let action = commentText.split(" ").splice(1, 1).join(" ").trim();
-    // Capture all `<extra>` text in `/bench <action> <extra>`
-    let extra = commentText.split(" ").splice(2).join(" ").trim();
+    let [action, ...rest] = commentText.slice(triggerCommand.length).trim().split(" ");
+    // Rest is `<extra>`
+    let extra = rest.join(" ").trim();
 
     const repo = context.payload.repository.name;
     const owner = context.payload.repository.owner.login;
