@@ -435,7 +435,7 @@ async function benchmarkRuntime(app, config) {
         shell.mkdir("-p", "git")
         shell.cd(cwd + "/git")
 
-        var { error } = benchContext.runTask(`git clone git@github.com:${config.owner}/${config.repo}.git`, "Cloning git repository...");
+        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
         if (error) {
             app.log("Git clone failed, probably directory exists...");
         }
