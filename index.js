@@ -1,4 +1,4 @@
-
+var shell = require('shelljs');
 var { benchBranch, benchmarkRuntime } = require("./bench");
 
 module.exports = app => {
@@ -16,6 +16,11 @@ module.exports = app => {
     let [action, ...rest] = commentText.slice(triggerCommand.length).trim().split(" ");
     // Rest is `<extra>`
     let extra = rest.join(" ").trim();
+
+    if (action === "clean") {
+      shell.exec("rm -df git", { silent: false });
+      return;
+    }
 
     const repo = context.payload.repository.name;
     const owner = context.payload.repository.owner.login;
