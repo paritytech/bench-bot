@@ -282,7 +282,7 @@ var AcalaRuntimeBenchmarkConfigs = {
             '--wasm-execution=compiled',
             '--heap-pages=4096',
             '--output=./modules/{pallet_folder}/src/weights.rs',
-            '--template=../../module-weight-template.hbs',
+            '--template=./templates/module-weight-template.hbs',
         ].join(' '),
     },
     "acala": {
