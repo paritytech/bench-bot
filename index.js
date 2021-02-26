@@ -18,7 +18,7 @@ module.exports = app => {
     let extra = rest.join(" ").trim();
 
     if (action === "clean") {
-      shell.exec("rm -df git", { silent: false });
+      shell.exec("rm -rf git", { silent: false });
       return;
     }
 
