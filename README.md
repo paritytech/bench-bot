@@ -29,6 +29,18 @@ WEBHOOK_PROXY_URL=<web hook url (like https://smee.io), not required>
 
 Add `BASE_BRANCH=master` or whatever is appropriate.
 
+#### Allowed users
+
+It is possible to restrict who can execute a benchmark. 
+
+Add `ALLOWED_USERS` with comma separated list of user's github ids. Eg: 
+
+`ALLOWED_USERS=123,455,234`
+
+Github user id can be retrieved using Github API: https://api.github.com/users/your_github_user_name
+
+If `ALLOWD_USERS` is not specified - any user can execute the benchmark.
+
 ## Permissions Needed
 
 * Metadata: Read Only
