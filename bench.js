@@ -18,8 +18,11 @@ function BenchContext(app, config) {
 
     self.runTask = function(cmd, title) {
         if (title) app.log(title);
-
-        const { stdout, stderr, code } = shell.exec(cmd, { silent: true });
+        let silent = true;
+        if (process.env.SILENT == 'false') {
+            silent = false;
+        }
+        const { stdout, stderr, code } = shell.exec(cmd, { silent });
         var error = false;
 
         if (code != 0) {
