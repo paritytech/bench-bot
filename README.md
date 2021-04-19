@@ -39,7 +39,7 @@ Add `ALLOWED_USERS` with comma separated list of user's github ids. Eg:
 
 Github user id can be retrieved using Github API: https://api.github.com/users/your_github_user_name
 
-If `ALLOWD_USERS` is not specified - any user can execute the benchmark.
+If `ALLOWED_USERS` is not specified - any user can execute the benchmark.
 
 ## Permissions Needed
 
