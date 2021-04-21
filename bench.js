@@ -129,7 +129,7 @@ var SubstrateRuntimeBenchmarkConfigs = {
         title: "Benchmark Runtime Pallet",
         branchCommand: [
             'cargo run --release',
-            '--features=runtime-benchmarks',
+            '--features=runtime-benchmarks,disable-logging',
             '--manifest-path=bin/node/cli/Cargo.toml',
             '--',
             'benchmark',
@@ -149,7 +149,7 @@ var SubstrateRuntimeBenchmarkConfigs = {
         title: "Benchmark Runtime Substrate Pallet",
         branchCommand: [
             'cargo run --release',
-            '--features=runtime-benchmarks',
+            '--features=runtime-benchmarks,disable-logging',
             '--manifest-path=bin/node/cli/Cargo.toml',
             '--',
             'benchmark',
@@ -167,7 +167,7 @@ var SubstrateRuntimeBenchmarkConfigs = {
     },
     "custom": {
         title: "Benchmark Runtime Custom",
-        branchCommand: 'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
+        branchCommand: 'cargo run --release --features runtime-benchmarks,disable-logging --manifest-path bin/node/cli/Cargo.toml -- benchmark',
     }
 }
 
