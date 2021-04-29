@@ -333,7 +333,7 @@ const createCommitFromChangedFilesThroughGithubAPI = async function(
         repo: repo,
         tree: createdTreeSHA,
         parents: [baseSHA],
-        message: "add benchmark results"
+        message: "merge master and add benchmark results"
     })
     if (createCommit.status !== 201) {
         return errorResult(
