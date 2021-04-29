@@ -3,12 +3,12 @@ const { createAppAuth } = require("@octokit/auth-app");
 var { benchBranch, benchmarkRuntime } = require("./bench");
 
 module.exports = app => {
-    const authenticator = createAppAuth({
-        appId: 1,
-        privateKey: fs.readFileSync(process.env.PRIVATE_KEY_PATH).toString(),
-        clientId: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET,
-    })
+  const authenticator = createAppAuth({
+      appId: process.env.APP_ID,
+      privateKey: fs.readFileSync(process.env.PRIVATE_KEY_PATH).toString(),
+      clientId: process.env.CLIENT_ID,
+      clientSecret: process.env.CLIENT_SECRET,
+  })
   app.log(`base branch: ${process.env.BASE_BRANCH}`);
 
   app.on('issue_comment', async context => {
