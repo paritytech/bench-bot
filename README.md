@@ -31,13 +31,13 @@ Add `BASE_BRANCH=master` or whatever is appropriate.
 
 ## Permissions Needed
 
-* Metadata: Read Only
-* Issues: Read/Write
-* Pull Requests: Read/Write
+* Metadata: Read-only
+* Issues: Read-only
+* Pull Requests: Read & write
++ Contents: Read & write
 
 Make sure to verify the permission increase if you change them.
 
 ## Subscriptions Needed
 
-* issue
-* issue_comment
+* Issue comment
