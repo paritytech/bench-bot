@@ -1,3 +1,5 @@
+const fs = require("fs")
+
 function errorResult(stderr, step) {
     return { error: true, step, stderr }
 }
@@ -17,14 +19,16 @@ function BenchContext(app, config) {
     self.config = config;
 
     self.runTask = function(cmd, title) {
-        if (title) app.log(title);
+        app.log(title ?? cmd);
 
         const { stdout, stderr, code } = shell.exec(cmd, { silent: true });
         var error = false;
 
         if (code != 0) {
             app.log(`ops.. Something went wrong (error code ${code})`);
-            app.log(`stderr: ${stderr}`);
+            if (stderr) {
+                app.log(`stderr: ${stderr.trim()}`);
+            }
             error = true;
         }
 
@@ -79,35 +83,36 @@ async function benchBranch(app, config) {
         shell.mkdir("git")
         shell.cd(cwd + "/git")
 
-        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
+        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`);
         if (error) {
             app.log("Git clone failed, probably directory exists...");
         }
 
         shell.cd(cwd + `/git/${config.repo}`);
 
-        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
+        var { error, stderr } = benchContext.runTask(`git fetch origin/${baseBranch}`);
         if (error) return errorResult(stderr);
 
-        var { error, stderr } = benchContext.runTask(`git checkout ${config.baseBranch}`, `Checking out ${config.baseBranch}...`);
+        var { error, stderr } = benchContext.runTask(`git fetch origin/${baseBranch}`);
+        if (error) return errorResult(stderr);
+
+        var { error, stderr } = benchContext.runTask(`git checkout ${config.baseBranch}`);
         if (error) {
             app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
         }
 
-        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.baseBranch}`, `Resetting ${config.baseBranch} hard...`);
+        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.baseBranch}`);
         if (error) return errorResult(stderr);
 
-        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
-
-        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
+        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand);
         if (error) return errorResult(stderr);
 
         await collector.CollectBaseCustomRunner(stdout);
 
-        var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`, `Merging branch ${config.branch}`);
+        var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`);
         if (error) return errorResult(stderr, "merge");
 
-        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
+        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching branch: ${config.branch}...`);
 
         await collector.CollectBranchCustomRunner(stdout);
 
@@ -277,7 +282,82 @@ function checkAllowedCharacters(command) {
     return true;
 }
 
-async function benchmarkRuntime(app, config) {
+// Push changes through the API so that the commit gets automatically verified by Github
+// https://github.community/t/how-to-properly-gpg-sign-github-app-bot-created-commits/131364/2
+const createCommitFromChangedFilesThroughGithubAPI = async function(
+    benchContext,
+    github,
+    { owner, repo, branch, baseSHA }
+) {
+    var { error } = benchContext.runTask("git add .")
+    if (error) return errorResult(stderr);
+
+    var {
+        error,
+        stdout: changedFiles,
+        stderr
+    } = benchContext.runTask(`git diff --name-only ${baseSHA}`)
+    if (error) return errorResult(stderr);
+
+    const tree = changedFiles
+        .trim()
+        .split("\n")
+        .filter(function (path) { return path.length !== 0 })
+        .map(function (path) {
+            return {
+                path,
+                content: fs.readFileSync(path).toString(),
+                // convert file mode from decimal to Linux's format
+                // https://stackoverflow.com/q/11775884
+                mode: parseInt(fs.statSync(path).mode.toString(8), 10).toString()
+            }
+        })
+    const createTree = await github
+        .git
+        .createTree({
+            owner,
+            repo,
+            tree,
+            base_tree: baseSHA
+        })
+    if (createTree.status !== 201) {
+        return errorResult(
+            JSON.stringify(createTree.data),
+            "failed to create a tree with the bench output"
+        );
+    }
+
+    const createdTreeSHA = createTree.data.sha
+    const createCommit = await github.git.createCommit({
+        owner: owner,
+        repo: repo,
+        tree: createdTreeSHA,
+        parents: [baseSHA],
+        message: "add benchmark results"
+    })
+    if (createCommit.status !== 201) {
+        return errorResult(
+            JSON.stringify(createCommit.data),
+            "failed to create commit with the bench output"
+        );
+    }
+
+    const createdCommitSHA = createCommit.data.sha
+    const updateBranch = await github.git.updateRef({
+        owner,
+        repo,
+        sha: createdCommitSHA,
+        ref: `heads/${branch}`
+    })
+    if (updateBranch.status !== 200) {
+        return errorResult(
+            JSON.stringify(updateBranch.data),
+            `failed to update branch ${branch} with the bench output`
+        );
+    }
+}
+
+async function benchmarkRuntime(app, config, { github }) {
     app.log("Waiting our turn to run benchmark...")
 
     const release = await mutex.acquire();
@@ -333,50 +413,49 @@ async function benchmarkRuntime(app, config) {
         shell.mkdir("git")
         shell.cd(cwd + "/git")
 
-        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
-        if (error) {
-            app.log("Git clone failed, probably directory exists...");
-        }
+        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`);
 
         shell.cd(cwd + `/git/${config.repo}`);
 
-        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
+        var { error, stderr } = benchContext.runTask("git clean -fd");
         if (error) return errorResult(stderr);
 
-        // Checkout the custom branch
-        var { error, stderr } = benchContext.runTask(`git checkout ${config.branch}`, `Checking out ${config.branch}...`);
-        if (error) {
-            app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
-        }
-
-        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`, `Resetting ${config.branch} hard...`);
+        var { error, stderr } = benchContext.runTask(`git fetch origin ${config.baseBranch}`);
         if (error) return errorResult(stderr);
 
-        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
+        //// Delete and recreate the target branch; note: does not work for forks
+        benchContext.runTask(`git reset --hard && git checkout ${config.baseBranch}`)
+        benchContext.runTask(`git branch -D ${config.branch}`)
+        var { error, stderr } = benchContext.runTask(`git fetch origin ${config.branch}`);
+        if (error) return errorResult(stderr);
+        var { error, stderr } = benchContext.runTask(`git checkout --track origin/${config.branch}`);
+        if (error) return errorResult(stderr);
+        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`);
+        if (error) return errorResult(stderr);
+
+        var { error, stdout } = benchContext.runTask("git rev-parse HEAD");
+        if (error) return errorResult(stderr);
+        const branchSHABeforeBench = stdout.trim()
 
         // Merge master branch
-        var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
-        if (error) return errorResult(stderr, "merge");
-        if (config.pushToken) {
-            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
-        } else {
-            benchContext.runTask(`git push`, `Pushing merge.`);
-        }
+        var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`);
+        if (error) return errorResult(stderr);
 
-        var { error, stdout, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
+        var { error, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
+        if (error) return errorResult(stderr);
 
         // If `--output` is set, we commit the benchmark file to the repo
         if (output) {
-            const regex = /--output(?:=|\s+)(".+?"|\S+)/;
-            const path = branchCommand.match(regex)[1];
-            benchContext.runTask(`git add ${path}`, `Adding new files.`);
-            benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
-            if (config.pushToken) {
-                benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
-            } else {
-                benchContext.runTask(`git push`, `Pushing commit.`);
+            var error = await createCommitFromChangedFilesThroughGithubAPI(
+                benchContext,
+                github,
+                { ...config, baseSHA: branchSHABeforeBench }
+            )
+            if (error) {
+                return error
             }
         }
+
         let report = `Benchmark: **${benchConfig.title}**\n\n`
             + branchCommand
             + "\n\n<details>\n<summary>Results</summary>\n\n"

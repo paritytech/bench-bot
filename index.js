@@ -1,12 +1,19 @@
-
+const fs = require("fs")
+const { createAppAuth } = require("@octokit/auth-app");
 var { benchBranch, benchmarkRuntime } = require("./bench");
 
 module.exports = app => {
+    const authenticator = createAppAuth({
+        appId: 1,
+        privateKey: fs.readFileSync(process.env.PRIVATE_KEY_PATH).toString(),
+        clientId: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET,
+    })
   app.log(`base branch: ${process.env.BASE_BRANCH}`);
 
   app.on('issue_comment', async context => {
     let commentText = context.payload.comment.body;
-    if (!commentText.startsWith("/bench")) {
+    if (context.payload.action !== "created" || !commentText.startsWith("/bench")) {
       return;
     }
 
@@ -26,21 +33,27 @@ module.exports = app => {
     const issue_comment = await context.github.issues.createComment(issueComment);
     const comment_id = issue_comment.data.id;
 
+    let pushToken = process.env.PUSH_TOKEN
+    if (!pushToken) {
+        const auth = await authenticator({ type: "app" })
+        pushToken = auth.token
+    }
+
     let config = {
       owner: owner,
       repo: repo,
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
       id: action,
-      pushToken: process.env.PUSH_TOKEN,
+      pushToken,
       extra: extra,
     }
 
     let report;
     if (action == "runtime") {
-      report = await benchmarkRuntime(app, config)
+      report = await benchmarkRuntime(app, config, context)
     } else {
-      report = await benchBranch(app, config)
+      report = await benchBranch(app, config, context)
     };
 
     if (report.error) {
