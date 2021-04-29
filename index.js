@@ -33,19 +33,14 @@ module.exports = app => {
     const issue_comment = await context.github.issues.createComment(issueComment);
     const comment_id = issue_comment.data.id;
 
-    let pushToken = process.env.PUSH_TOKEN
-    if (!pushToken) {
-        const auth = await authenticator({ type: "app" })
-        pushToken = auth.token
-    }
-
+    const auth = await authenticator({ type: "app" })
     let config = {
       owner: owner,
       repo: repo,
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
       id: action,
-      pushToken,
+      pushToken: auth.token,
       extra: extra,
     }
 
