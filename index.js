@@ -18,7 +18,10 @@ module.exports = app => {
     let extra = rest.join(" ").trim();
 
     if (action === "clean") {
+      app.log('execute clean command');
       shell.exec("rm -rf git", { silent: false });
+      const issueComment = context.issue({ body: `Clean done` });
+      await context.github.issues.createComment(issueComment);
       return;
     }
 
