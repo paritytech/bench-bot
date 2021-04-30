@@ -269,7 +269,6 @@ var PolkadotRuntimeBenchmarkConfigs = {
 var AcalaRuntimeBenchmarkConfigs = {
     "module": {
         title: "Benchmark Runtime Module",
-        preparationCommand: "make init",
         branchCommand: [
             'cargo run --release',
             '--bin=acala',
@@ -290,7 +289,6 @@ var AcalaRuntimeBenchmarkConfigs = {
     },
     "acala": {
         title: "Benchmark Runtime Acala Module",
-        preparationCommand: "make init",
         branchCommand: [
             'cargo run --release',
             '--bin=acala',
@@ -312,7 +310,6 @@ var AcalaRuntimeBenchmarkConfigs = {
     },
     "karura": {
         title: "Benchmark Runtime Karura Module",
-        preparationCommand: "make init",
         branchCommand: [
             'cargo run --release',
             '--bin=acala',
@@ -334,7 +331,6 @@ var AcalaRuntimeBenchmarkConfigs = {
     },
     "mandala": {
         title: "Benchmark Runtime Mandala Module",
-        preparationCommand: "make init",
         branchCommand: [
             'cargo run --release',
             '--bin=acala',
@@ -356,7 +352,6 @@ var AcalaRuntimeBenchmarkConfigs = {
     },
     "custom": {
         title: "Benchmark Runtime Custom",
-        preparationCommand: "make init",
         branchCommand: 'cargo run --release --bin acala --features runtime-benchmarks -- benchmark',
     }
 }
