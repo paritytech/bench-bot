@@ -18,6 +18,8 @@ function BenchContext(app, config) {
 
     self.runTask = function(cmd, title) {
         if (title) app.log(title);
+        app.log(cmd);
+
         let silent = true;
         if (process.env.SILENT == 'false') {
             silent = false;
@@ -26,8 +28,8 @@ function BenchContext(app, config) {
         var error = false;
 
         if (code != 0) {
-            app.log(`ops.. Something went wrong (error code ${code})`);
-            app.log(`stderr: ${stderr}`);
+            app.error(`ops.. Something went wrong (error code ${code})`);
+            app.error(`stderr: ${stderr}`);
             error = true;
         }
 
@@ -90,6 +92,9 @@ async function benchBranch(app, config) {
         shell.cd(cwd + `/git/${config.repo}`);
 
         var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
+        if (error) return errorResult(stderr);
+
+        var { error, stderr } = benchContext.runTask(`git submodule update --init`);
         if (error) return errorResult(stderr);
 
         var { error, stderr } = benchContext.runTask(`git checkout ${config.baseBranch}`, `Checking out ${config.baseBranch}...`);
