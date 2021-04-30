@@ -23,9 +23,9 @@ function BenchContext(app, config) {
 
         if (title) app.log(title);
 
-        const redacted = secrets.reduce((x, s) => x.replaceAll(s, '***'), cmd)
+        const redacted = secrets.reduce((x, s) => x.replaceAll(s, '***'), cmd);
 
-        app.log(redacted.replaceAll(config.pushToken));
+        app.log(redacted);
 
         let silent = true;
         if (process.env.SILENT == 'false') {
