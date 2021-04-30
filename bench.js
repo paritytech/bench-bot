@@ -17,8 +17,15 @@ function BenchContext(app, config) {
     self.config = config;
 
     self.runTask = function(cmd, title) {
+        const secrets = [
+            self.config.pushToken
+        ].filter(Boolean);
+
         if (title) app.log(title);
-        app.log(cmd);
+
+        const redacted = secrets.reduce((x, s) => x.replaceAll(s, '***'), cmd)
+
+        app.debug(redacted.replaceAll(config.pushToken));
 
         let silent = true;
         if (process.env.SILENT == 'false') {
@@ -28,8 +35,7 @@ function BenchContext(app, config) {
         var error = false;
 
         if (code != 0) {
-            app.error(`ops.. Something went wrong (error code ${code})`);
-            app.error(`stderr: ${stderr}`);
+            app.error(`Error code ${code}: ${stderr}`);
             error = true;
         }
 
@@ -458,6 +464,9 @@ async function benchmarkRuntime(app, config) {
         }
 
         var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`, `Resetting ${config.branch} hard...`);
+        if (error) return errorResult(stderr);
+
+        var { error, stderr } = benchContext.runTask(`git submodule update --init`);
         if (error) return errorResult(stderr);
 
         benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand, 'Preparing...');
