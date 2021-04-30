@@ -25,7 +25,7 @@ function BenchContext(app, config) {
 
         const redacted = secrets.reduce((x, s) => x.replaceAll(s, '***'), cmd)
 
-        app.debug(redacted.replaceAll(config.pushToken));
+        app.log(redacted.replaceAll(config.pushToken));
 
         let silent = true;
         if (process.env.SILENT == 'false') {
@@ -35,7 +35,7 @@ function BenchContext(app, config) {
         var error = false;
 
         if (code != 0) {
-            app.error(`Error code ${code}: ${stderr}`);
+            app.log(`Error code ${code}: ${stderr}`);
             error = true;
         }
 
