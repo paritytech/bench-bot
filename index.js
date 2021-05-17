@@ -6,7 +6,11 @@ module.exports = app => {
 
   app.on('issue_comment', async context => {
     let commentText = context.payload.comment.body;
-    if (!commentText.startsWith("/bench")) {
+    if (
+      !context.payload.issue.hasOwnProperty("pull_request") ||
+      context.payload.action !== "created" ||
+      !commentText.startsWith("/bench")
+    ) {
       return;
     }
 
@@ -20,6 +24,7 @@ module.exports = app => {
     const pull_number = context.payload.issue.number;
 
     let pr = await context.github.pulls.get({ owner, repo, pull_number });
+    const contributor = pr.data.head.user.login;
     const branchName = pr.data.head.ref;
     app.log(`branch: ${branchName}`);
     const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName} (vs ${process.env.BASE_BRANCH})\n\n Comment will be updated.` });
@@ -27,7 +32,8 @@ module.exports = app => {
     const comment_id = issue_comment.data.id;
 
     let config = {
-      owner: owner,
+      owner,
+      contributor,
       repo: repo,
       branch: branchName,
       baseBranch: process.env.BASE_BRANCH,
