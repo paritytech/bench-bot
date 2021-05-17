@@ -61,6 +61,45 @@ var BenchConfigs = {
     }
 }
 
+const prepareBranch = function(
+  {
+    contributor,
+    owner,
+    repo,
+    branch,
+    baseBranch,
+  },
+  {
+    benchContext
+  }
+) {
+  shell.mkdir("git")
+  benchContext.runTask(`git clone https://github.com/${owner}/${repo}`, "Cloning git repository...");
+  shell.cd(cwd + `/git/${repo}`);
+
+  var { error, stdout } = benchContext.runTask("git rev-parse HEAD");
+  if (error) return errorResult(stderr);
+  const detachedHead = stdout.trim()
+
+  // Check out to the detached head so that any branch can be deleted
+  var { error, stderr } = benchContext.runTask(`git checkout ${detachedHead}`);
+  if (error) return errorResult(stderr);
+
+  // Recreate PR remote
+  benchContext.runTask(`git remote remove pr`);
+  var { error, stderr } = benchContext.runTask(`git remote add pr https://github.com/${contributor}/${repo}.git`);
+  if (error) return errorResult(stderr);
+
+  // Fetch and recreate the PR's branch
+  benchContext.runTask(`git branch -D ${branch}`);
+  var { error, stderr } = benchContext.runTask(`git fetch pr ${branch} && git checkout --track pr/${branch}`, `Checking out ${branch}...`);
+  if (error) return errorResult(stderr);
+
+  // Fetch and merge master
+  var { error, stderr } = benchContext.runTask(`git pull origin ${baseBranch}`, `Merging branch ${baseBranch}`);
+  if (error) return errorResult(stderr);
+}
+
 async function benchBranch(app, config) {
     app.log("Waiting our turn to run benchmark...")
 
@@ -76,36 +115,9 @@ async function benchBranch(app, config) {
 
         var benchContext = new BenchContext(app, config);
         console.log(`Started benchmark "${benchConfig.title}."`);
-        shell.mkdir("git")
-        shell.cd(cwd + "/git")
 
-        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
-        if (error) {
-            app.log("Git clone failed, probably directory exists...");
-        }
-
-        shell.cd(cwd + `/git/${config.repo}`);
-
-        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
-        if (error) return errorResult(stderr);
-
-        var { error, stderr } = benchContext.runTask(`git checkout ${config.baseBranch}`, `Checking out ${config.baseBranch}...`);
-        if (error) {
-            app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
-        }
-
-        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.baseBranch}`, `Resetting ${config.baseBranch} hard...`);
-        if (error) return errorResult(stderr);
-
-        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
-
-        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching ${config.baseBranch}... (${benchConfig.branchCommand})`);
-        if (error) return errorResult(stderr);
-
-        await collector.CollectBaseCustomRunner(stdout);
-
-        var { error, stderr } = benchContext.runTask(`git merge origin/${config.branch}`, `Merging branch ${config.branch}`);
-        if (error) return errorResult(stderr, "merge");
+        var error = prepareBranch(config, { benchContext })
+        if (error) return error
 
         var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
 
@@ -330,38 +342,9 @@ async function benchmarkRuntime(app, config) {
 
         var benchContext = new BenchContext(app, config);
         console.log(`Started runtime benchmark "${benchConfig.title}."`);
-        shell.mkdir("git")
-        shell.cd(cwd + "/git")
 
-        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
-        if (error) {
-            app.log("Git clone failed, probably directory exists...");
-        }
-
-        shell.cd(cwd + `/git/${config.repo}`);
-
-        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
-        if (error) return errorResult(stderr);
-
-        // Checkout the custom branch
-        var { error, stderr } = benchContext.runTask(`git checkout ${config.branch}`, `Checking out ${config.branch}...`);
-        if (error) {
-            app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
-        }
-
-        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`, `Resetting ${config.branch} hard...`);
-        if (error) return errorResult(stderr);
-
-        benchConfig.preparationCommand && benchContext.runTask(benchConfig.preparationCommand);
-
-        // Merge master branch
-        var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
-        if (error) return errorResult(stderr, "merge");
-        if (config.pushToken) {
-            benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
-        } else {
-            benchContext.runTask(`git push`, `Pushing merge.`);
-        }
+        var error = prepareBranch(config, { benchContext })
+        if (error) return error
 
         var { error, stdout, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
 
@@ -372,7 +355,7 @@ async function benchmarkRuntime(app, config) {
             benchContext.runTask(`git add ${path}`, `Adding new files.`);
             benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
             if (config.pushToken) {
-                benchContext.runTask(`git push https://${config.pushToken}@github.com/paritytech/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
+                benchContext.runTask(`git push https://${config.pushToken}@github.com/${config.contributor}/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
             } else {
                 benchContext.runTask(`git push`, `Pushing commit.`);
             }
