@@ -1,0 +1,258 @@
+#!/bin/bash
+
+err_tag="[error]"
+info_tag="[info]"
+
+log_error() {
+  >&2 echo "$err_tag $1"
+}
+
+log() {
+  echo "$info_tag $1"
+}
+
+exit_if_error() {
+  if [ $? -eq 0 ]; then
+    return
+  fi
+
+  local exit_code=$?
+  log_error "${1:-Command failed} (exit code $exit_code)"
+  exit $exit_code
+}
+
+remote_repo_name="bench-bot"
+remote_repo="https://github.com/paritytech/$remote_repo_name"
+
+benchbot_user="benchbot"
+benchbot_service="benchbot.service"
+install_parent="/home/$benchbot_user"
+install_location="$install_parent/bench-bot"
+
+print_help_and_exit() {
+echo "
+Usage: run [command]
+
+Commands:
+  help:
+    Print this message and exit
+
+
+  bootstrap:
+    Bootstrap the bot to its predefined location ($install_location).
+
+    Underneath, it invokes subcommands which can be also ran individually.
+    Use them with '--force' in order to overwrite an existing installation:
+      - install_service
+      - install_repo
+      - install_deps
+
+
+  start/stop/restart:
+    As the name implies
+
+
+  update [branch]:
+    Pull a branch from $remote_repo, install it and restart the bot
+"
+  exit $1
+}
+
+current_user="${USER:-$(whoami 2>/dev/null)}"
+if [ "$current_user" != "$benchbot_user" ]; then
+  cmd_prefix="sudo -u $benchbot_user"
+fi
+
+install_deps() {
+  # needed to detect rustup if it's installed
+  if [ -e ~/.cargo/env ]; then
+    source ~/.cargo/env
+  fi
+
+  if [ "${2:-}" == "--force" ] || ! which rustup &>/dev/null; then
+    log "Installing Rust"
+
+    curl https://sh.rustup.rs -sSf | sh -s -- -y
+    exit_if_error "Failed to install rustup"
+
+    rustup toolchain nightly
+    exit_if_error "Failed to install nightly toolchain"
+
+    rustup default nightly
+    exit_if_error "Failed to set up nightly toolchain"
+
+    rustup target add wasm32-unknown-unknown
+    exit_if_error "Failed to add wasm target"
+  fi
+}
+
+install_service() {
+  local target_dir="/usr/lib/systemd/system"
+  local target_service_file="$target_dir/$benchbot_service"
+
+  if [ "${2:-}" != "--force" ] && [ -e "$target_service_file" ]; then
+    return
+  fi
+
+  &>/dev/null sudo mkdir -p "$target_dir"
+
+echo "
+[Unit]
+Description=Bench Bot
+After=network.target
+Documentation=$remote_repo
+
+[Service]
+ExecStart=/bin/bash -c 'cd \"$install_location\" && ./run main'
+User=$benchbot_user
+Restart=always
+RestartSec=30
+CapabilityBoundingSet=
+LockPersonality=true
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateMounts=true
+PrivateTmp=true
+PrivateUsers=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RemoveIPC=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=default.target
+" | sudo tee "$target_service_file" >/dev/null
+
+  exit_if_error "Failed to create service file at $target_service_file"
+}
+
+main() {
+  source ~/.cargo/env && \
+  cd "$install_location" && \
+  yarn && \
+  yarn start 2>&1 | tee -a log.txt
+}
+
+follow_service_logs() {
+  sudo journalctl -u "$benchbot_service" --follow --since "$1"
+}
+
+service() {
+  sudo systemctl "$1" "$benchbot_service" 
+}
+
+create_benchbot_user() {
+  if id "$benchbot_user" &>/dev/null; then
+    return
+  fi
+
+  log "Creating $benchbot_user current_user"
+
+  sudo useradd "$benchbot_user"
+  exit_if_error "Failed to create current_user $benchbot"
+
+  sudo mkhomedir_helper "$benchbot_user"
+  exit_if_error "Failed to create home directory for $benchbot"
+}
+
+install_repo() {
+  if [ "${2:-}" != "--force" ] && [ -e "$install_location" ]; then
+    return
+  fi
+
+  mkdir -p "$install_parent" && cd "$install_parent"
+  exit_if_error "Failed to create and enter $install_parent"
+
+  git clone "$remote_repo" "$install_location"
+  exit_if_error "Failed to clone $remote_repo to $install_location"
+
+  cd "$install_location" && yarn
+  exit_if_error "Failed to install dependencies in $install_location"
+}
+
+install_branch() {
+  branch="${1:-}"
+  if [ ! "$branch" ]; then
+    log_error "Branch name needs to be supplied"
+    print_help_and_exit 1
+  fi
+
+  cd "$install_location"
+  exit_if_error "Failed to cd into $install_location"
+
+  detached_head="$(git rev-parse HEAD)"
+  exit_if_error "Failed to get current HEAD sha"
+
+  git checkout "$detached_head" >/dev/null
+  exit_if_error "Failed to checkout to current HEAD sha"
+
+  git branch -D "$branch" &>/dev/null
+
+  git fetch origin "$branch"
+  exit_if_error "Failed to fetch $branch from remote"
+
+  git checkout --track "origin/$branch"
+}
+
+case "$1" in
+  bootstrap)
+    create_benchbot_user
+    exit_if_error "Failed to create $benchbot_user user"
+
+    $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_deps"
+    exit_if_error "Failed to install dependencies"
+
+    $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_repo"
+    exit_if_error "Failed to install repository"
+
+    install_service
+    exit_if_error "Failed to install service"
+  ;;
+  start|stop|restart|status)
+    start_date="$(date +"%Y-%m-%d %H:%M")"
+
+    service "$1"
+    echo "Exit code: $?"
+
+    case "$1" in
+      start|restart)
+        exit_if_error "Failed to $1 service"
+
+        follow_service_logs "$start_date"
+      ;;
+    esac
+  ;;
+  main|install_service|install_repo|install_branch|install_deps)
+    $@
+  ;;
+  update)
+    branch="${2:-}"
+    if [ ! "$branch" ]; then
+      log_error "Branch name needs to be supplied"
+      print_help_and_exit 1
+    fi
+
+    service stop
+
+    $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_branch '$branch'"
+    exit_if_error "Failed to checkout to branch $branch"
+
+    start_date="$(date +"%Y-%m-%d %H:%M")"
+    service start
+    exit_if_error "Failed to restart service"
+
+    follow_service_logs "$start_date"
+  ;;
+  help)
+    print_help_and_exit 0
+  ;;
+  *)
+    log_error "Invalid command $1"
+    print_help_and_exit 1
+  ;;
+esac
