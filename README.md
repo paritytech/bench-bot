@@ -24,7 +24,7 @@ BASE_BRANCH=<the default branch for merging into the PRs, e.g. master>
 WEBHOOK_PROXY_URL=<optional; webhook proxy for development>
 ```
 
-For development it's recommended to use [Smee](https://smee.io) for
+For development it's recommended to use [smee](https://smee.io) for
 `WEBHOOK_PROXY_URL`; that way you can test your changes locally without having
 to SSH into the dedicated machine - it avoids disrupting the production
 service.
@@ -38,13 +38,34 @@ service.
 ### Dedicated machine
 
 Note: Before disrupting the production deployment, it's first recommended to
-check if some benchmark is running with `pgrep -au benchbot`.
+check if some benchmark is running with `pgrep -au benchbot`. With SSH:
+
+`ssh user@remote 'sudo pgrep -au benchbot'`
+
+And check if the command above shows any `cargo` or `rust` command being ran
+currently (for the Rust benchmarks).
+
+#### Introduction
 
 The [run](./run) script is used to manage the application.
 
 `run bootstrap` will take care of creating and installing everything from
-scratch. When all is done, a systemd service will be created for you to manage
-with `run {start,restart,stop,status}` which acts as a wrapper for `systemctl`.
+scratch. After installation, a systemd service will be created for you to
+manage with `run {start,restart,stop,status}` which acts as a wrapper for
+`systemctl`.
+
+#### Updating branches
+
+The `update` subcommand will fetch and restart the bot with the selected branch. e.g.
+
+`ssh user@remote '/home/benchbot/bench-bot/run update master'`
+
+For pull requests, the format is `pull/${ID}/head:${BRANCH}` as per the
+[Github specification](https://docs.github.com/en/github/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally#modifying-an-inactive-pull-request-locally). e.g.
+
+`ssh user@remote '/home/benchbot/bench-bot/run update pull/1/head:branch'`
+
+#### Setting up
 
 By default the bot will be bootstrapped to `/home/benchbot/bench-bot` and
 executed by the `benchbot` user. From your machine, execute the `run` script
@@ -56,11 +77,8 @@ e.g.
 
 `ssh user@remote '/home/benchbot/bench-bot/run restart'`
 
-If developing on a branch, use the `run update [branch]` in order to restart
-the bot to your branch of choice. This command will take care of fetching and
-restarting the service automatically:
 
-`ssh user@remote '/home/benchbot/bench-bot/run update my-feature-branch'`
+#### Additional information
 
 The full explanation for all commands is available with `run help`.
 

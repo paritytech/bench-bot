@@ -11,14 +11,18 @@ log() {
   echo "$info_tag $1"
 }
 
+exit_with_error() {
+  local msg="$1"
+  local exit_code=${2:-1}
+  log_error "$msg (exit code $exit_code)"
+  exit $2
+}
+
 exit_if_error() {
   if [ $? -eq 0 ]; then
     return
   fi
-
-  local exit_code=$?
-  log_error "${1:-Command failed} (exit code $exit_code)"
-  exit $exit_code
+  exit_with_error "${1:-Command failed}" $?
 }
 
 remote_repo_name="bench-bot"
@@ -176,9 +180,9 @@ install_repo() {
 }
 
 install_branch() {
-  branch="${1:-}"
-  if [ ! "$branch" ]; then
-    log_error "Branch name needs to be supplied"
+  ref="${1:-}"
+  if [ ! "$ref" ]; then
+    log_error "Ref needs to be supplied"
     print_help_and_exit 1
   fi
 
@@ -191,12 +195,35 @@ install_branch() {
   git checkout "$detached_head" >/dev/null
   exit_if_error "Failed to checkout to current HEAD sha"
 
-  git branch -D "$branch" &>/dev/null
+  git fetch origin "$ref"
+  exit_if_error "Failed to fetch $ref from remote"
 
-  git fetch origin "$branch"
-  exit_if_error "Failed to fetch $branch from remote"
+  # Parse pull requests with pull/ID/head:BRANCHNAME as specified by Github
+  if [[ "$ref" =~ ^pull/[[:digit:]]+/head:(.*) ]]; then
+    local branch="${BASH_REMATCH[1]}"
+  else
+    local branch="$ref"
+  fi
 
-  git checkout --track "origin/$branch"
+  while IFS= read -r line; do
+    if  [[ "$line" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]+refs/heads/(.*) ]] &&
+        [ "${BASH_REMATCH[2]}" == "$branch" ]; then
+      local ref_commit="${BASH_REMATCH[1]}"
+      break
+    fi
+  done < <(git show-ref)
+
+  if [ ! "${ref_commit:-}" ]; then
+    exit_with_error "Failed to find commit reference for $ref (branch $branch)"
+  fi
+
+  git branch -D "$branch"
+
+  git checkout "$ref_commit" >/dev/null
+  exit_if_error "Failed to checkout commit $ref_commit (ref $ref, branch $branch)"
+
+  git switch -c "$branch"
+  exit_if_error "Failed to switch from detached head to branch $branch (ref $ref, commit $ref_commit)"
 }
 
 case "$1" in
