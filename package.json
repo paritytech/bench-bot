@@ -17,7 +17,8 @@
   "dependencies": {
     "async-mutex": "^0.1.4",
     "probot": "^10.8.0",
-    "shelljs": "^0.8.3"
+    "shelljs": "^0.8.3",
+    "smee-client": "^1.2.2"
   },
   "devDependencies": {
     "jest": "^24.9.0",
