@@ -76,8 +76,11 @@ const prepareBranch = function(
   shell.mkdir("git")
   shell.cd(cwd + "/git")
 
-  benchContext.runTask(`git clone https://github.com/${owner}/${repo}`, "Cloning git repository...");
+  benchContext.runTask(`git clone https://github.com/${owner}/${repo}`);
   shell.cd(cwd + `/git/${repo}`);
+
+  var { error } = benchContext.runTask(`git add . && git reset --hard HEAD`);
+  if (error) return errorResult(stderr);
 
   var { error, stdout } = benchContext.runTask("git rev-parse HEAD");
   if (error) return errorResult(stderr);
