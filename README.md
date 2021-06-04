@@ -17,10 +17,12 @@ For the response to work, [environment variables](#configuration) and
 Create an `.env` file in the root with the following:
 
 ```
-APP_ID=<Github app id>
-WEBHOOK_SECRET=<Github app secret>
-PRIVATE_KEY_PATH=<Path the the private key of the github app>
+APP_ID=<App id from Github App Settings>
 BASE_BRANCH=<the default branch for merging into the PRs, e.g. master>
+CLIENT_ID=<Client ID from Github App Settings>
+CLIENT_SECRET=<Client ID from Github App Settings>
+PRIVATE_KEY_PATH=<Path the the private key of the github app>
+WEBHOOK_SECRET=<Webhook secret from Github App Settings>
 WEBHOOK_PROXY_URL=<optional; webhook proxy for development>
 ```
 
@@ -95,6 +97,7 @@ As well as to `./log.txt`.
 * Metadata: Read Only
 * Issues: Read/Write
 * Pull Requests: Read/Write
+* Contents: Read/Write
 
 ## Event subscriptions
 

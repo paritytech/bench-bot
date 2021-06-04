@@ -180,7 +180,7 @@ install_repo() {
 }
 
 install_branch() {
-  ref="${1:-}"
+  local ref="${1:-}"
   if [ ! "$ref" ]; then
     log_error "Ref needs to be supplied"
     print_help_and_exit 1
@@ -194,16 +194,29 @@ install_branch() {
 
   git checkout "$detached_head" >/dev/null
   exit_if_error "Failed to checkout to current HEAD sha"
-
-  git fetch origin "$ref"
-  exit_if_error "Failed to fetch $ref from remote"
+  # NOTE: it's NECESSARY to checkout to the detached HEAD since the branch's ref
+  # will be deleted in the following step, which might be the current checked-out
+  # ref; deleting the currently checked-out ref might put the git tree in a
+  # unrecoverable state.
 
   # Parse pull requests with pull/ID/head:BRANCHNAME as specified by Github
   if [[ "$ref" =~ ^pull/[[:digit:]]+/head:(.*) ]]; then
     local branch="${BASH_REMATCH[1]}"
   else
     local branch="$ref"
+    ref="$ref:$ref"
   fi
+
+  local branch_ref="refs/heads/$branch"
+  git update-ref -d "$branch_ref"
+  exit_if_error "Failed to clean up ref $branch_ref before fetching the branch $branch"
+  # NOTE: be sure to check the step above since proceeding without it working
+  # might potentially put the git tree in a unrecoverable state.
+  # This depends on the git tree being in a detached HEAD state as done by `git
+  # checkout "$detached_head"` above.
+
+  git fetch origin "$ref"
+  exit_if_error "Failed to fetch $ref from remote"
 
   while IFS= read -r line; do
     if  [[ "$line" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]+refs/heads/(.*) ]] &&
@@ -224,6 +237,8 @@ install_branch() {
 
   git switch -c "$branch"
   exit_if_error "Failed to switch from detached head to branch $branch (ref $ref, commit $ref_commit)"
+
+  git rev-parse HEAD
 }
 
 case "$1" in
