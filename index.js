@@ -38,6 +38,25 @@ module.exports = app => {
       return;
     }
 
+    const installationId = (context.payload.installation || {}).id;
+    if (!installationId) {
+      await context.octokit.issues.createComment(
+        context.issue({ body: `Error: Installation id was missing from webhook payload` })
+      )
+      return
+    }
+
+    const getPushDomain = async function() {
+      const token = (
+        await authInstallation({
+          type: "installation",
+          installationId,
+        })
+      ).token
+
+      return `https://x-access-token:${token}@github.com`
+    }
+
     // Capture `<action>` in `/bench <action> <extra>`
     let action = commentText.split(" ").splice(1, 1).join(" ").trim();
     // Capture all `<extra>` text in `/bench <action> <extra>`
@@ -51,24 +70,6 @@ module.exports = app => {
     const contributor = pr.data.head.user.login;
     const branch = pr.data.head.ref;
     app.log(`branch: ${branch}`);
-
-    const installationId = (context.payload.installation || {}).id;
-    if (!installationId) {
-      await context.octokit.issues.createComment(
-        context.issue({ body: `Error: Installation id was missing from webhook payload` })
-      )
-      return
-    }
-    const getPushDomain = async function() {
-      const token = (
-        await authInstallation({
-          type: "installation",
-          installationId,
-        })
-      ).token
-
-      return `https://x-access-token:${token}@github.com`
-    }
 
     const issueComment = context.issue({ body: `Starting benchmark for branch: ${branch} (vs ${baseBranch})\n\n Comment will be updated.` });
     const issue_comment = await context.octokit.issues.createComment(issueComment);
