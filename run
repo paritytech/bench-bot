@@ -180,7 +180,7 @@ install_repo() {
 }
 
 install_branch() {
-  ref="${1:-}"
+  local ref="${1:-}"
   if [ ! "$ref" ]; then
     log_error "Ref needs to be supplied"
     print_help_and_exit 1
@@ -203,7 +203,8 @@ install_branch() {
   if [[ "$ref" =~ ^pull/[[:digit:]]+/head:(.*) ]]; then
     local branch="${BASH_REMATCH[1]}"
   else
-    local branch="$ref:$ref"
+    local branch="$ref"
+    ref="$ref:$ref"
   fi
 
   local branch_ref="refs/heads/$branch"
@@ -236,6 +237,8 @@ install_branch() {
 
   git switch -c "$branch"
   exit_if_error "Failed to switch from detached head to branch $branch (ref $ref, commit $ref_commit)"
+
+  git rev-parse HEAD
 }
 
 case "$1" in

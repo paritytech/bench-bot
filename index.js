@@ -1,8 +1,32 @@
+const { createAppAuth } = require("@octokit/auth-app")
+const assert = require("assert")
+const fs = require("fs")
 
 var { benchBranch, benchmarkRuntime } = require("./bench");
 
 module.exports = app => {
-  app.log(`base branch: ${process.env.BASE_BRANCH}`);
+  const baseBranch = process.env.BASE_BRANCH || "master" 
+  app.log(`base branch: ${baseBranch}`);
+
+  const appId = parseInt(process.env.APP_ID)
+  assert(appId)
+
+  const clientId = process.env.CLIENT_ID
+  assert(clientId)
+  const clientSecret = process.env.CLIENT_SECRET
+  assert(clientSecret)
+
+  const privateKeyPath = process.env.PRIVATE_KEY_PATH
+  assert(privateKeyPath)
+  const privateKey = fs.readFileSync(privateKeyPath).toString()
+  assert(privateKey)
+
+  const authInstallation = createAppAuth({
+    appId,
+    privateKey,
+    clientId,
+    clientSecret,
+  })
 
   app.on('issue_comment', async context => {
     let commentText = context.payload.comment.body;
@@ -23,23 +47,42 @@ module.exports = app => {
     const owner = context.payload.repository.owner.login;
     const pull_number = context.payload.issue.number;
 
-    let pr = await context.github.pulls.get({ owner, repo, pull_number });
+    let pr = await context.octokit.pulls.get({ owner, repo, pull_number });
     const contributor = pr.data.head.user.login;
-    const branchName = pr.data.head.ref;
-    app.log(`branch: ${branchName}`);
-    const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName} (vs ${process.env.BASE_BRANCH})\n\n Comment will be updated.` });
-    const issue_comment = await context.github.issues.createComment(issueComment);
+    const branch = pr.data.head.ref;
+    app.log(`branch: ${branch}`);
+
+    const installationId = (context.payload.installation || {}).id;
+    if (!installationId) {
+      await context.octokit.issues.createComment(
+        context.issue({ body: `Error: Installation id was missing from webhook payload` })
+      )
+      return
+    }
+    const getPushDomain = async function() {
+      const token = (
+        await authInstallation({
+          type: "installation",
+          installationId,
+        })
+      ).token
+
+      return `https://x-access-token:${token}@github.com`
+    }
+
+    const issueComment = context.issue({ body: `Starting benchmark for branch: ${branch} (vs ${baseBranch})\n\n Comment will be updated.` });
+    const issue_comment = await context.octokit.issues.createComment(issueComment);
     const comment_id = issue_comment.data.id;
 
     let config = {
       owner,
       contributor,
-      repo: repo,
-      branch: branchName,
-      baseBranch: process.env.BASE_BRANCH,
+      repo,
+      branch,
+      baseBranch,
       id: action,
-      pushToken: process.env.PUSH_TOKEN,
-      extra: extra,
+      extra,
+      getPushDomain
     }
 
     let report;
@@ -52,21 +95,21 @@ module.exports = app => {
     if (report.error) {
       app.log(`error: ${report.stderr}`)
       if (report.step != "merge") {
-        context.github.issues.updateComment({
+        context.octokit.issues.updateComment({
           owner, repo, comment_id,
-          body: `Error running benchmark: **${branchName}**\n\n<details><summary>stdout</summary>${report.stderr}</details>`,
+          body: `Error running benchmark: **${branch}**\n\n<details><summary>stdout</summary>${report.stderr}</details>`,
         });
       } else {
-        context.github.issues.updateComment({
+        context.octokit.issues.updateComment({
           owner, repo, comment_id,
-          body: `Error running benchmark: **${branchName}**\n\nMerge conflict merging branch to master!`,
+          body: `Error running benchmark: **${branch}**\n\nMerge conflict merging branch to master!`,
         });
       }
     } else {
       app.log(`report: ${report}`);
-      context.github.issues.updateComment({
+      context.octokit.issues.updateComment({
         owner, repo, comment_id,
-        body: `Finished benchmark for branch: **${branchName}**\n\n${report}`,
+        body: `Finished benchmark for branch: **${branch}**\n\n${report}`,
       });
     }
 

@@ -351,25 +351,34 @@ async function benchmarkRuntime(app, config) {
         var error = prepareBranch(config, { benchContext })
         if (error) return error
 
-        var { error, stdout, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
+        var { stdout, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
 
-        // If `--output` is set, we commit the benchmark file to the repo
-        if (output) {
-            const regex = /--output(?:=|\s+)(".+?"|\S+)/;
-            const path = branchCommand.match(regex)[1];
-            benchContext.runTask(`git add ${path}`, `Adding new files.`);
-            benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
-            if (config.pushToken) {
-                benchContext.runTask(`git push https://${config.pushToken}@github.com/${config.contributor}/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
-            } else {
-                benchContext.runTask(`git push`, `Pushing commit.`);
-            }
-        }
         let report = `Benchmark: **${benchConfig.title}**\n\n`
             + branchCommand
             + "\n\n<details>\n<summary>Results</summary>\n\n"
             + (stdout ? stdout : stderr)
             + "\n\n </details>";
+
+        // If `--output` is set, we commit the benchmark file to the repo
+        if (output) {
+            const regex = /--output(?:=|\s+)(".+?"|\S+)/;
+            const path = branchCommand.match(regex)[1];
+            benchContext.runTask(`git add ${path}`);
+            benchContext.runTask(`git commit -m "${branchCommand}"`);
+
+            const target = `${config.contributor}/${config.repo}`
+            const pushDomain = await config.getPushDomain()
+
+            try {
+              benchContext.runTask(`git remote set-url pr ${pushDomain}/${target}.git`, "Setting up remote for PR");
+              benchContext.runTask(`git push pr HEAD`);
+            } catch (err) {
+              const errorDate = new Date.toISOString()
+              console.log(`Push error happened at ${errorDate}:`)
+              console.error(err)
+              report = `${report}\n\nNOTE: Error occurred while trying to push the generated weights (at ${errorDate} in the logs).`
+            }
+        }
 
         return report;
     }
