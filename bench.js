@@ -309,6 +309,8 @@ async function benchmarkRuntime(app, config) {
         var benchConfig;
         if (config.repo == "substrate") {
             benchConfig = SubstrateRuntimeBenchmarkConfigs[command];
+        } else if (config.repo == "cumulus") {
+            benchConfig = SubstrateRuntimeBenchmarkConfigs[command];
         } else if (config.repo == "polkadot") {
             benchConfig = PolkadotRuntimeBenchmarkConfigs[command];
         } else {
