@@ -5,7 +5,7 @@ const fs = require("fs")
 var { benchBranch, benchmarkRuntime } = require("./bench");
 
 module.exports = app => {
-  const baseBranch = process.env.BASE_BRANCH || "master" 
+  const baseBranch = process.env.BASE_BRANCH || "master"
   app.log(`base branch: ${baseBranch}`);
 
   const appId = parseInt(process.env.APP_ID)
@@ -92,6 +92,9 @@ module.exports = app => {
     } else {
       report = await benchBranch(app, config)
     };
+
+    // Max github body is 65536 characters... we are a little conservative.
+    report = report.substring(0, 65000)
 
     if (report.error) {
       app.log(`error: ${report.stderr}`)
