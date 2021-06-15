@@ -94,7 +94,7 @@ module.exports = app => {
     };
 
     // Max github body is 65536 characters... we are a little conservative.
-    report = report.substring(0, 65000)
+    report = report.substr(-65000)
 
     if (report.error) {
       app.log(`error: ${report.stderr}`)
