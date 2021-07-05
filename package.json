@@ -17,7 +17,7 @@
   "dependencies": {
     "@octokit/auth-app": "^3.4.1",
     "async-mutex": "^0.1.4",
-    "probot": "^11.4.0",
+    "probot": "^12.1.0",
     "shelljs": "^0.8.3",
     "smee-client": "^1.2.2"
   },
