@@ -19,29 +19,62 @@ function BenchContext(app, config) {
     self.app = app;
     self.config = config;
 
-    self.runTask = function(cmd, title) {
-        if (title) app.log(title);
+    self.runTask = async function(cmd, { title, shouldLogOutput } = {}) {
+      if (title) {
+        app.log(title)
+      }
 
-        let stdout = "", stderr = "", error = false
-        try {
-          stdout = cp.execSync(cmd, { stdio: "pipe", shell: true }).toString()
-        } catch (err) {
-          error = true
-          if (err.code) {
-            app.log(`ops.. Something went wrong (error code ${error.code})`);
-            stdout = err.stdout.toString()
+      let stdout = "", stderr = "", error = false
 
-            stderr = err.stderr.toString()
-            if (stderr) {
-              app.log(`stderr: ${stderr.trim()}`);
-            }
-          } else {
-            app.log.error("Caught exception in command execution")
-            app.log.error(err)
-          }
+      try {
+        if (shouldLogOutput) {
+          console.log(`<=== Start command output (cwd: ${process.cwd()})`)
         }
 
-        return { stdout, stderr, error };
+        await new Promise(function (resolve) {
+          const proc = cp.spawn("/bin/bash", ["-c", cmd], { stdio: "pipe" })
+
+          proc.stdout.on("data", function (data) {
+            data = data.toString()
+
+            if (data && shouldLogOutput) {
+              console.log(data.trim())
+            }
+
+            stdout += data
+          })
+
+          proc.stderr.on("data", function (data) {
+            data = data.toString()
+
+            if (data && shouldLogOutput) {
+              console.log(data.trim())
+            }
+
+            stderr += data
+          })
+
+          proc.on("close", function (code) {
+            error = !!code
+            resolve()
+          })
+        })
+      } catch (err) {
+        error = true
+        if (err.code) {
+          stdout = err.stdout.toString()
+          stderr = err.stderr.toString()
+        } else {
+          app.log.error("Caught exception in command execution")
+          app.log.error(err)
+        }
+      } finally {
+        if (shouldLogOutput) {
+          console.log("===> Finished command output")
+        }
+      }
+
+      return { stdout, stderr, error };
     }
 }
 
@@ -92,33 +125,33 @@ const prepareBranch = async function(
 
   const repositoryPath = path.join(gitDirectory, repo)
   var { url } = await getPushDomain()
-  benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`);
+  await benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`);
   shell.cd(repositoryPath)
 
-  var { error } = benchContext.runTask(`git add . && git reset --hard HEAD`);
+  var { error } = await benchContext.runTask(`git add . && git reset --hard HEAD`);
   if (error) return errorResult(stderr);
 
-  var { error, stdout } = benchContext.runTask("git rev-parse HEAD");
+  var { error, stdout } = await benchContext.runTask("git rev-parse HEAD");
   if (error) return errorResult(stderr);
   const detachedHead = stdout.trim()
 
   // Check out to the detached head so that any branch can be deleted
-  var { error, stderr } = benchContext.runTask(`git checkout ${detachedHead}`);
+  var { error, stderr } = await benchContext.runTask(`git checkout ${detachedHead}`);
   if (error) return errorResult(stderr);
 
   // Recreate PR remote
-  benchContext.runTask(`git remote remove pr`);
+  await benchContext.runTask(`git remote remove pr`);
   var { url } = await getPushDomain()
-  var { error, stderr } = benchContext.runTask(`git remote add pr ${url}/${contributor}/${repo}.git`);
+  var { error, stderr } = await benchContext.runTask(`git remote add pr ${url}/${contributor}/${repo}.git`);
   if (error) return errorResult(`Failed to add remote reference to ${owner}/${repo}`);
 
   // Fetch and recreate the PR's branch
-  benchContext.runTask(`git branch -D ${branch}`);
-  var { error, stderr } = benchContext.runTask(`git fetch pr ${branch} && git checkout --track pr/${branch}`, `Checking out ${branch}...`);
+  await benchContext.runTask(`git branch -D ${branch}`);
+  var { error, stderr } = await benchContext.runTask(`git fetch pr ${branch} && git checkout --track pr/${branch}`, `Checking out ${branch}...`);
   if (error) return errorResult(stderr);
 
   // Fetch and merge master
-  var { error, stderr } = benchContext.runTask(`git pull origin ${baseBranch}`, `Merging branch ${baseBranch}`);
+  var { error, stderr } = await benchContext.runTask(`git pull origin ${baseBranch}`, `Merging branch ${baseBranch}`);
   if (error) return errorResult(stderr);
 }
 
@@ -145,7 +178,10 @@ function benchBranch(app, config) {
         var error = await prepareBranch(config, { benchContext })
         if (error) return error
 
-        var { stderr, error, stdout } = benchContext.runTask(benchCommand, `Benching branch ${config.branch}...`);
+        var { stderr, error, stdout } = await benchContext.runTask(benchCommand, {
+          title: `Benching branch ${config.branch}...`,
+          shouldLogOutput: true
+        });
         if (error) return errorResult(stderr)
 
         await collector.CollectBranchCustomRunner(stdout);
@@ -372,22 +408,25 @@ function benchmarkRuntime(app, config) {
           var error = await prepareBranch(config, { benchContext })
           if (error) return error
 
-          var { stdout, stderr } = benchContext.runTask(benchCommand, `Benching runtime in branch ${config.branch}...`);
+          var { stdout, stderr } = await benchContext.runTask(benchCommand, {
+            title: `Benching runtime in branch ${config.branch}...`,
+            shouldLogOutput: true
+          });
           let extraInfo = ""
 
           // If `--output` is set, we commit the benchmark file to the repo
           if (benchCommand.includes("--output")) {
               const regex = /--output(?:=|\s+)(".+?"|\S+)/;
               const path = benchCommand.match(regex)[1];
-              benchContext.runTask(`git add ${path}`);
-              benchContext.runTask(`git commit -m "${benchCommand}"`);
+              await benchContext.runTask(`git add ${path}`);
+              await benchContext.runTask(`git commit -m "${benchCommand}"`);
 
               const target = `${config.contributor}/${config.repo}`
               const { url, token } = await config.getPushDomain()
 
               try {
-                benchContext.runTask(`git remote set-url pr ${url}/${target}.git`, "Setting up remote for PR");
-                benchContext.runTask(`git push pr HEAD`);
+                await benchContext.runTask(`git remote set-url pr ${url}/${target}.git`, "Setting up remote for PR");
+                await benchContext.runTask(`git push pr HEAD`);
               } catch (error) {
                 extraInfo = `NOTE: Failed to push commits to repository: ${error.toString().replace(token, "{secret}", "g")}`
               }
