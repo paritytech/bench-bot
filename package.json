@@ -15,15 +15,15 @@
     "test:watch": "jest --watch --notify --notifyMode=change --coverage"
   },
   "dependencies": {
-    "@octokit/auth-app": "^3.4.1",
-    "async-mutex": "^0.1.4",
-    "probot": "^11.4.0",
-    "shelljs": "^0.8.3",
+    "@octokit/auth-app": "^3.5.3",
+    "async-mutex": "^0.3.1",
+    "probot": "^12.1.0",
+    "shelljs": "^0.8.4",
     "smee-client": "^1.2.2"
   },
   "devDependencies": {
-    "jest": "^27.0.4",
-    "nodemon": "^2.0.0"
+    "jest": "^27.0.6",
+    "nodemon": "^2.0.9"
   },
   "nodemonConfig": {
     "exec": "npm start",

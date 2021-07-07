@@ -1,5 +1,8 @@
-function errorResult(stderr, step) {
-    return { error: true, step, stderr }
+const cp = require("child_process")
+const path = require("path")
+
+function errorResult(message, error) {
+    return { isError: true, message, error }
 }
 
 let cwd = process.cwd();
@@ -16,19 +19,62 @@ function BenchContext(app, config) {
     self.app = app;
     self.config = config;
 
-    self.runTask = function(cmd, title) {
-        if (title) app.log(title);
+    self.runTask = async function(cmd, { title, shouldLogOutput } = {}) {
+      if (title) {
+        app.log(title)
+      }
 
-        const { stdout, stderr, code } = shell.exec(cmd, { silent: true });
-        var error = false;
+      let stdout = "", stderr = "", error = false
 
-        if (code != 0) {
-            app.log(`ops.. Something went wrong (error code ${code})`);
-            app.log(`stderr: ${stderr}`);
-            error = true;
+      try {
+        if (shouldLogOutput) {
+          console.log(`<=== Start command output (cwd: ${process.cwd()})`)
         }
 
-        return { stdout, stderr, error };
+        await new Promise(function (resolve) {
+          const proc = cp.spawn("/bin/bash", ["-c", cmd], { stdio: "pipe" })
+
+          proc.stdout.on("data", function (data) {
+            data = data.toString()
+
+            if (data && shouldLogOutput) {
+              console.log(data.trim())
+            }
+
+            stdout += data
+          })
+
+          proc.stderr.on("data", function (data) {
+            data = data.toString()
+
+            if (data && shouldLogOutput) {
+              console.log(data.trim())
+            }
+
+            stderr += data
+          })
+
+          proc.on("close", function (code) {
+            error = !!code
+            resolve()
+          })
+        })
+      } catch (err) {
+        error = true
+        if (err.code) {
+          stdout = err.stdout.toString()
+          stderr = err.stderr.toString()
+        } else {
+          app.log.error("Caught exception in command execution")
+          app.log.error(err)
+        }
+      } finally {
+        if (shouldLogOutput) {
+          console.log("===> Finished command output")
+        }
+      }
+
+      return { stdout, stderr, error };
     }
 }
 
@@ -37,115 +83,128 @@ function BenchContext(app, config) {
 var BenchConfigs = {
     "import": {
         title: "Import Benchmark (random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::medium --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::medium --json'
     },
     "import/small": {
         title: "Import Benchmark (Small block (10tx) with random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::small --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::small --json'
     },
     "import/large": {
         title: "Import Benchmark (Large block (500tx) with random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::large --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::large --json'
     },
     "import/full-wasm": {
         title: "Import Benchmark (Full block with wasm, for weights validation)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::full --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::full --json'
     },
     "import/wasm": {
         title: "Import Benchmark via wasm (random transfers)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::medium --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::medium --json'
     },
     "ed25519": {
         title: "Import Benchmark (random transfers, ed25519 signed)",
-        branchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::ed25519::transfer_keep_alive::rocksdb::medium --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::native::ed25519::transfer_keep_alive::rocksdb::medium --json'
     }
 }
 
-const prepareBranch = function(
+const prepareBranch = async function(
   {
     contributor,
     owner,
     repo,
     branch,
     baseBranch,
+    getPushDomain
   },
   {
     benchContext
   }
 ) {
-  shell.mkdir("git")
-  shell.cd(cwd + "/git")
+  const gitDirectory = path.join(cwd, "git")
+  shell.mkdir(gitDirectory)
 
-  benchContext.runTask(`git clone https://github.com/${owner}/${repo}`);
-  shell.cd(cwd + `/git/${repo}`);
+  const repositoryPath = path.join(gitDirectory, repo)
+  var { url } = await getPushDomain()
+  await benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`);
+  shell.cd(repositoryPath)
 
-  var { error } = benchContext.runTask(`git add . && git reset --hard HEAD`);
+  var { error } = await benchContext.runTask(`git add . && git reset --hard HEAD`);
   if (error) return errorResult(stderr);
 
-  var { error, stdout } = benchContext.runTask("git rev-parse HEAD");
+  var { error, stdout } = await benchContext.runTask("git rev-parse HEAD");
   if (error) return errorResult(stderr);
   const detachedHead = stdout.trim()
 
   // Check out to the detached head so that any branch can be deleted
-  var { error, stderr } = benchContext.runTask(`git checkout ${detachedHead}`);
+  var { error, stderr } = await benchContext.runTask(`git checkout ${detachedHead}`);
   if (error) return errorResult(stderr);
 
   // Recreate PR remote
-  benchContext.runTask(`git remote remove pr`);
-  var { error, stderr } = benchContext.runTask(`git remote add pr https://github.com/${contributor}/${repo}.git`);
-  if (error) return errorResult(stderr);
+  await benchContext.runTask(`git remote remove pr`);
+  var { url } = await getPushDomain()
+  var { error, stderr } = await benchContext.runTask(`git remote add pr ${url}/${contributor}/${repo}.git`);
+  if (error) return errorResult(`Failed to add remote reference to ${owner}/${repo}`);
 
   // Fetch and recreate the PR's branch
-  benchContext.runTask(`git branch -D ${branch}`);
-  var { error, stderr } = benchContext.runTask(`git fetch pr ${branch} && git checkout --track pr/${branch}`, `Checking out ${branch}...`);
+  await benchContext.runTask(`git branch -D ${branch}`);
+  var { error, stderr } = await benchContext.runTask(`git fetch pr ${branch} && git checkout --track pr/${branch}`, `Checking out ${branch}...`);
   if (error) return errorResult(stderr);
 
   // Fetch and merge master
-  var { error, stderr } = benchContext.runTask(`git pull origin ${baseBranch}`, `Merging branch ${baseBranch}`);
+  var { error, stderr } = await benchContext.runTask(`git pull origin ${baseBranch}`, `Merging branch ${baseBranch}`);
   if (error) return errorResult(stderr);
 }
 
-async function benchBranch(app, config) {
-    app.log("Waiting our turn to run benchmark...")
+function benchBranch(app, config) {
+    app.log("Waiting our turn to run benchBranch...")
 
-    const release = await mutex.acquire();
-
-    try {
+    return mutex.runExclusive(async function () {
+      try {
         if (config.repo != "substrate") {
             return errorResult("Node benchmarks only available on Substrate.")
         }
 
-        var benchConfig = BenchConfigs[config.id || "import"];
-        collector = new libCollector.Collector();
+        var id = config.id
+        var benchConfig = BenchConfigs[id];
+        if (!benchConfig) {
+          return errorResult(`Bench configuration for "${id}" was not found`)
+        }
 
+        const collector = new libCollector.Collector();
         var benchContext = new BenchContext(app, config);
-        console.log(`Started benchmark "${benchConfig.title}."`);
+        var { title, benchCommand } = benchConfig
+        app.log(`Started benchmark "${title}."`);
 
-        var error = prepareBranch(config, { benchContext })
+        var error = await prepareBranch(config, { benchContext })
         if (error) return error
 
-        var { stderr, error, stdout } = benchContext.runTask(benchConfig.branchCommand, `Benching new branch: ${config.branch}...`);
+        var { stderr, error, stdout } = await benchContext.runTask(benchCommand, {
+          title: `Benching branch ${config.branch}...`,
+          shouldLogOutput: true
+        });
+        if (error) return errorResult(stderr)
 
         await collector.CollectBranchCustomRunner(stdout);
+        let output = await collector.Report();
 
-        let report = await collector.Report();
-        report = `Benchmark: **${benchConfig.title}**\n\n` + report;
-
-        return report;
-    }
-    catch (error) {
-        return errorResult(error.toString());
-    }
-    finally {
-        release();
-    }
+        return {
+          title,
+          output,
+          extraInfo: "",
+          benchCommand
+        };
+      }
+      catch (error) {
+          return errorResult("Caught exception in benchBranch", error);
+      }
+    })
 }
 
 var SubstrateRuntimeBenchmarkConfigs = {
     "pallet": {
-        title: "Benchmark Runtime Pallet",
-        branchCommand: [
-            'cargo run --release',
+        title: "Runtime Pallet",
+        benchCommand: [
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--manifest-path=bin/node/cli/Cargo.toml',
             '--',
@@ -163,9 +222,9 @@ var SubstrateRuntimeBenchmarkConfigs = {
         ].join(' '),
     },
     "substrate": {
-        title: "Benchmark Runtime Substrate Pallet",
-        branchCommand: [
-            'cargo run --release',
+        title: "Runtime Substrate Pallet",
+        benchCommand: [
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--manifest-path=bin/node/cli/Cargo.toml',
             '--',
@@ -183,16 +242,16 @@ var SubstrateRuntimeBenchmarkConfigs = {
         ].join(' '),
     },
     "custom": {
-        title: "Benchmark Runtime Custom",
-        branchCommand: 'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
+        title: "Runtime Custom",
+        benchCommand: 'cargo run --quiet --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
     }
 }
 
 var PolkadotRuntimeBenchmarkConfigs = {
     "pallet": {
-        title: "Benchmark Runtime Pallet",
-        branchCommand: [
-            'cargo run --release',
+        title: "Runtime Pallet",
+        benchCommand: [
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--',
             'benchmark',
@@ -209,9 +268,9 @@ var PolkadotRuntimeBenchmarkConfigs = {
         ].join(' '),
     },
     "polkadot": {
-        title: "Benchmark Runtime Polkadot Pallet",
-        branchCommand: [
-            'cargo run --release',
+        title: "Runtime Polkadot Pallet",
+        benchCommand: [
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--',
             'benchmark',
@@ -228,9 +287,9 @@ var PolkadotRuntimeBenchmarkConfigs = {
         ].join(' '),
     },
     "kusama": {
-        title: "Benchmark Runtime Kusama Pallet",
-        branchCommand: [
-            'cargo run --release',
+        title: "Runtime Kusama Pallet",
+        benchCommand: [
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--',
             'benchmark',
@@ -247,9 +306,9 @@ var PolkadotRuntimeBenchmarkConfigs = {
         ].join(' '),
     },
     "westend": {
-        title: "Benchmark Runtime Westend Pallet",
-        branchCommand: [
-            'cargo run --release',
+        title: "Runtime Westend Pallet",
+        benchCommand: [
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--',
             'benchmark',
@@ -266,8 +325,8 @@ var PolkadotRuntimeBenchmarkConfigs = {
         ].join(' '),
     },
     "custom": {
-        title: "Benchmark Runtime Custom",
-        branchCommand: 'cargo run --release --features runtime-benchmarks -- benchmark',
+        title: "Runtime Custom",
+        benchCommand: 'cargo run --quiet --release --features runtime-benchmarks -- benchmark',
     }
 }
 
@@ -294,100 +353,96 @@ function checkAllowedCharacters(command) {
     return true;
 }
 
-async function benchmarkRuntime(app, config) {
-    app.log("Waiting our turn to run benchmark...")
+function benchmarkRuntime(app, config) {
+    app.log("Waiting our turn to run benchmarkRuntime...")
 
-    const release = await mutex.acquire();
+    return mutex.runExclusive(async function () {
+      try {
+          if (config.extra.split(" ").length < 2) {
+              return errorResult(`Incomplete command.`)
+          }
 
-    try {
-        if (config.extra.split(" ").length < 2) {
-            return errorResult(`Incomplete command.`)
-        }
+          let command = config.extra.split(" ")[0];
 
-        let command = config.extra.split(" ")[0];
+          var benchConfig;
+          if (config.repo == "substrate") {
+              benchConfig = SubstrateRuntimeBenchmarkConfigs[command];
+          } else if (config.repo == "polkadot") {
+              benchConfig = PolkadotRuntimeBenchmarkConfigs[command];
+          } else {
+              return errorResult(`${config.repo} repo is not supported.`)
+          }
 
-        var benchConfig;
-        if (config.repo == "substrate") {
-            benchConfig = SubstrateRuntimeBenchmarkConfigs[command];
-        } else if (config.repo == "polkadot") {
-            benchConfig = PolkadotRuntimeBenchmarkConfigs[command];
-        } else {
-            return errorResult(`${config.repo} repo is not supported.`)
-        }
+          var extra = config.extra.split(" ").slice(1).join(" ").trim();
 
-        var extra = config.extra.split(" ").slice(1).join(" ").trim();
+          if (!checkAllowedCharacters(extra)) {
+              return errorResult(`Not allowed to use #&|; in the command!`);
+          }
 
-        if (!checkAllowedCharacters(extra)) {
-            return errorResult(`Not allowed to use #&|; in the command!`);
-        }
+          // Append extra flags to the end of the command
+          let benchCommand = benchConfig.benchCommand;
+          if (command == "custom") {
+              // extra here should just be raw arguments to add to the command
+              benchCommand += " " + extra;
+          } else {
+              // extra here should be the name of a pallet
+              benchCommand = benchCommand.replace("{pallet_name}", extra);
+              // custom output file name so that pallets with path don't cause issues
+              let outputFile = extra.includes("::") ? extra.replace("::", "_") + ".rs" : '';
+              benchCommand = benchCommand.replace("{output_file}", outputFile);
+              // pallet folder should be just the name of the pallet, without the leading
+              // "pallet_" or "frame_", then separated with "-"
+              let palletFolder = extra.split("_").slice(1).join("-").trim();
+              benchCommand = benchCommand.replace("{pallet_folder}", palletFolder);
+          }
 
-        // Append extra flags to the end of the command
-        let branchCommand = benchConfig.branchCommand;
-        if (command == "custom") {
-            // extra here should just be raw arguments to add to the command
-            branchCommand += " " + extra;
-        } else {
-            // extra here should be the name of a pallet
-            branchCommand = branchCommand.replace("{pallet_name}", extra);
-            // custom output file name so that pallets with path don't cause issues
-            let outputFile = extra.includes("::") ? extra.replace("::", "_") + ".rs" : '';
-            branchCommand = branchCommand.replace("{output_file}", outputFile);
-            // pallet folder should be just the name of the pallet, without the leading
-            // "pallet_" or "frame_", then separated with "-"
-            let palletFolder = extra.split("_").slice(1).join("-").trim();
-            branchCommand = branchCommand.replace("{pallet_folder}", palletFolder);
-        }
+          let missing = checkRuntimeBenchmarkCommand(benchCommand);
+          if (missing.length > 0) {
+              return errorResult(`Missing required flags: ${missing.toString()}`)
+          }
 
-        let missing = checkRuntimeBenchmarkCommand(branchCommand);
-        let output = branchCommand.includes("--output");
+          var benchContext = new BenchContext(app, config);
+          var { title } = benchConfig
+          app.log(`Started runtime benchmark "${title}."`);
 
-        if (missing.length > 0) {
-            return errorResult(`Missing required flags: ${missing.toString()}`)
-        }
+          var error = await prepareBranch(config, { benchContext })
+          if (error) return error
 
-        var benchContext = new BenchContext(app, config);
-        console.log(`Started runtime benchmark "${benchConfig.title}."`);
+          var { stdout, stderr } = await benchContext.runTask(benchCommand, {
+            title: `Benching runtime in branch ${config.branch}...`,
+            shouldLogOutput: true
+          });
+          let extraInfo = ""
 
-        var error = prepareBranch(config, { benchContext })
-        if (error) return error
+          // If `--output` is set, we commit the benchmark file to the repo
+          if (benchCommand.includes("--output")) {
+              const regex = /--output(?:=|\s+)(".+?"|\S+)/;
+              const path = benchCommand.match(regex)[1];
+              await benchContext.runTask(`git add ${path}`);
+              await benchContext.runTask(`git commit -m "${benchCommand}"`);
 
-        var { stdout, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
+              const target = `${config.contributor}/${config.repo}`
+              const { url, token } = await config.getPushDomain()
 
-        let report = `Benchmark: **${benchConfig.title}**\n\n`
-            + branchCommand
-            + "\n\n<details>\n<summary>Results</summary>\n\n"
-            + (stdout ? stdout : stderr)
-            + "\n\n </details>";
+              try {
+                await benchContext.runTask(`git remote set-url pr ${url}/${target}.git`, "Setting up remote for PR");
+                await benchContext.runTask(`git push pr HEAD`);
+              } catch (error) {
+                extraInfo = `NOTE: Failed to push commits to repository: ${error.toString().replace(token, "{secret}", "g")}`
+              }
+          }
 
-        // If `--output` is set, we commit the benchmark file to the repo
-        if (output) {
-            const regex = /--output(?:=|\s+)(".+?"|\S+)/;
-            const path = branchCommand.match(regex)[1];
-            benchContext.runTask(`git add ${path}`);
-            benchContext.runTask(`git commit -m "${branchCommand}"`);
-
-            const target = `${config.contributor}/${config.repo}`
-            const pushDomain = await config.getPushDomain()
-
-            try {
-              benchContext.runTask(`git remote set-url pr ${pushDomain}/${target}.git`, "Setting up remote for PR");
-              benchContext.runTask(`git push pr HEAD`);
-            } catch (err) {
-              const errorDate = new Date.toISOString()
-              console.log(`Push error happened at ${errorDate}:`)
-              console.error(err)
-              report = `${report}\n\nNOTE: Error occurred while trying to push the generated weights (at ${errorDate} in the logs).`
-            }
-        }
-
-        return report;
-    }
-    catch (error) {
-        return errorResult(error.toString());
-    }
-    finally {
-        release();
-    }
+          return {
+            title,
+            output: stdout ? stdout : stderr,
+            extraInfo,
+            benchCommand
+          }
+      }
+      catch (error) {
+          return errorResult("Caught exception in benchmarkRuntime", error);
+      }
+    })
 }
 
 module.exports = {
