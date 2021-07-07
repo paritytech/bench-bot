@@ -83,27 +83,27 @@ function BenchContext(app, config) {
 var BenchConfigs = {
     "import": {
         title: "Import Benchmark (random transfers)",
-        benchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::medium --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::medium --json'
     },
     "import/small": {
         title: "Import Benchmark (Small block (10tx) with random transfers)",
-        benchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::small --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::small --json'
     },
     "import/large": {
         title: "Import Benchmark (Large block (500tx) with random transfers)",
-        benchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::large --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::large --json'
     },
     "import/full-wasm": {
         title: "Import Benchmark (Full block with wasm, for weights validation)",
-        benchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::full --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::full --json'
     },
     "import/wasm": {
         title: "Import Benchmark via wasm (random transfers)",
-        benchCommand: 'cargo run --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::medium --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::medium --json'
     },
     "ed25519": {
         title: "Import Benchmark (random transfers, ed25519 signed)",
-        benchCommand: 'cargo run --release -p node-bench --quiet -- node::import::native::ed25519::transfer_keep_alive::rocksdb::medium --json'
+        benchCommand: 'cargo run --quiet --release -p node-bench --quiet -- node::import::native::ed25519::transfer_keep_alive::rocksdb::medium --json'
     }
 }
 
@@ -204,7 +204,7 @@ var SubstrateRuntimeBenchmarkConfigs = {
     "pallet": {
         title: "Runtime Pallet",
         benchCommand: [
-            'cargo run --release',
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--manifest-path=bin/node/cli/Cargo.toml',
             '--',
@@ -224,7 +224,7 @@ var SubstrateRuntimeBenchmarkConfigs = {
     "substrate": {
         title: "Runtime Substrate Pallet",
         benchCommand: [
-            'cargo run --release',
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--manifest-path=bin/node/cli/Cargo.toml',
             '--',
@@ -243,7 +243,7 @@ var SubstrateRuntimeBenchmarkConfigs = {
     },
     "custom": {
         title: "Runtime Custom",
-        benchCommand: 'cargo run --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
+        benchCommand: 'cargo run --quiet --release --features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark',
     }
 }
 
@@ -251,7 +251,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
     "pallet": {
         title: "Runtime Pallet",
         benchCommand: [
-            'cargo run --release',
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--',
             'benchmark',
@@ -270,7 +270,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
     "polkadot": {
         title: "Runtime Polkadot Pallet",
         benchCommand: [
-            'cargo run --release',
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--',
             'benchmark',
@@ -289,7 +289,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
     "kusama": {
         title: "Runtime Kusama Pallet",
         benchCommand: [
-            'cargo run --release',
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--',
             'benchmark',
@@ -308,7 +308,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
     "westend": {
         title: "Runtime Westend Pallet",
         benchCommand: [
-            'cargo run --release',
+            'cargo run --quiet --release',
             '--features=runtime-benchmarks',
             '--',
             'benchmark',
@@ -326,7 +326,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
     },
     "custom": {
         title: "Runtime Custom",
-        benchCommand: 'cargo run --release --features runtime-benchmarks -- benchmark',
+        benchCommand: 'cargo run --quiet --release --features runtime-benchmarks -- benchmark',
     }
 }
 
