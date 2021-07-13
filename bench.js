@@ -28,32 +28,13 @@ function BenchContext(app, config) {
         app.log(title)
       }
 
-      let stdout = "", stderr = "", error = false
+      const { stdout, stderr, code } = shell.exec(cmd, { silent: !shouldLogOutput });
+      var error = false
 
-      try {
-        if (shouldLogOutput) {
-          console.log(`<=== Start command output (cwd: ${process.cwd()})`)
-          cp.execFileSync("/bin/dash", ["-c", cmd], { stdio: "ignore" })
-          stdout = fs.readFileSync(runnerOutput).toString()
-        } else {
-          stdout = cp.execSync(cmd, { stdio: "pipe", shell: true }).toString()
-        }
-      } catch (err) {
+      if (code != 0) {
+        app.log(`Command failed with error code ${code}: ${cmd}`)
+        console.log(stderr)
         error = true
-        if (err.code) {
-          app.log(`Command ${cmd} failed with error code ${error.code}`);
-          stderr = err.stderr.toString()
-          if (stderr) {
-            app.log(`stderr: ${stderr.trim()}`);
-          }
-        } else {
-          app.log.error("Caught exception in command execution")
-          app.log.error(err)
-        }
-      } finally {
-        if (shouldLogOutput) {
-          console.log("===> Finished command output")
-        }
       }
 
       return { stdout, stderr, error };
