@@ -33,7 +33,7 @@ function BenchContext(app, config) {
       try {
         if (shouldLogOutput) {
           console.log(`<=== Start command output (cwd: ${process.cwd()})`)
-          cp.execFileSync("/bin/dash", ["-c", `${cmd} | tee ${runnerOutput}`], { stdio: "inherit" })
+          cp.execFileSync("/bin/dash", ["-c", `${cmd} | tee ${runnerOutput}`], { stdio: "ignore" })
           stdout = fs.readFileSync(runnerOutput).toString()
         } else {
           stdout = cp.execSync(cmd, { stdio: "pipe", shell: true }).toString()
