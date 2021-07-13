@@ -88,8 +88,6 @@ After it's running, the logs will be to the systemd journal:
 
 `sudo journalctl -u benchbot.service`
 
-As well as to `./log.txt`.
-
 # Github Settings
 
 ## Permissions

@@ -139,7 +139,7 @@ main() {
   source ~/.cargo/env && \
   cd "$install_location" && \
   yarn && \
-  yarn start 2>&1 | tee -a log.txt
+  yarn start 2>&1
 }
 
 follow_service_logs() {

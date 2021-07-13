@@ -1,3 +1,4 @@
+const fs = require("fs")
 const cp = require("child_process")
 const path = require("path")
 
@@ -7,6 +8,9 @@ function errorResult(message, error) {
 
 let cwd = process.cwd();
 console.log(`process cwd: ${cwd}`);
+
+const wrapCmd = path.join(__dirname, "wrap_cmd.sh")
+const runnerOutput = path.join(__dirname, "runner_stdout.txt")
 
 const Mutex = require('async-mutex').Mutex;
 const mutex = new Mutex();
@@ -29,41 +33,21 @@ function BenchContext(app, config) {
       try {
         if (shouldLogOutput) {
           console.log(`<=== Start command output (cwd: ${process.cwd()})`)
+          cp.execFileSync("/bin/dash", ["-c", `${cmd} | tee ${runnerOutput}`], { stdio: "inherit" })
+          stdout = fs.readFileSync(runnerOutput).toString()
+        } else {
+          stdout = cp.execSync(cmd, { stdio: "pipe", shell: true }).toString()
         }
-
-        await new Promise(function (resolve) {
-          const proc = cp.spawn("/bin/bash", ["-c", cmd], { stdio: "pipe" })
-
-          proc.stdout.on("data", function (data) {
-            data = data.toString()
-
-            if (data && shouldLogOutput) {
-              console.log(data.trim())
-            }
-
-            stdout += data
-          })
-
-          proc.stderr.on("data", function (data) {
-            data = data.toString()
-
-            if (data && shouldLogOutput) {
-              console.log(data.trim())
-            }
-
-            stderr += data
-          })
-
-          proc.on("close", function (code) {
-            error = !!code
-            resolve()
-          })
-        })
       } catch (err) {
         error = true
         if (err.code) {
+          app.log(`Command ${cmd} failed with error code ${error.code}`);
           stdout = err.stdout.toString()
+
           stderr = err.stderr.toString()
+          if (stderr) {
+            app.log(`stderr: ${stderr.trim()}`);
+          }
         } else {
           app.log.error("Caught exception in command execution")
           app.log.error(err)
