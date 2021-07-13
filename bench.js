@@ -33,7 +33,7 @@ function BenchContext(app, config) {
       try {
         if (shouldLogOutput) {
           console.log(`<=== Start command output (cwd: ${process.cwd()})`)
-          cp.execFileSync("/bin/dash", ["-c", `${cmd} | tee ${runnerOutput}`], { stdio: "ignore" })
+          cp.execFileSync("/bin/dash", ["-c", cmd], { stdio: "ignore" })
           stdout = fs.readFileSync(runnerOutput).toString()
         } else {
           stdout = cp.execSync(cmd, { stdio: "pipe", shell: true }).toString()
@@ -42,8 +42,6 @@ function BenchContext(app, config) {
         error = true
         if (err.code) {
           app.log(`Command ${cmd} failed with error code ${error.code}`);
-          stdout = err.stdout.toString()
-
           stderr = err.stderr.toString()
           if (stderr) {
             app.log(`stderr: ${stderr.trim()}`);
