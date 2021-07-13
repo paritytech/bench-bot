@@ -9,7 +9,6 @@ function errorResult(message, error) {
 let cwd = process.cwd();
 console.log(`process cwd: ${cwd}`);
 
-const wrapCmd = path.join(__dirname, "wrap_cmd.sh")
 const runnerOutput = path.join(__dirname, "runner_stdout.txt")
 
 const Mutex = require('async-mutex').Mutex;
@@ -28,13 +27,34 @@ function BenchContext(app, config) {
         app.log(title)
       }
 
-      const { stdout, stderr, code } = shell.exec(cmd, { silent: !shouldLogOutput });
-      var error = false
+      let stdout = "", stderr = "", error = false
 
-      if (code != 0) {
-        app.log(`Command failed with error code ${code}: ${cmd}`)
-        console.log(stderr)
+      try {
+        if (shouldLogOutput) {
+          console.log(`<=== Start command output (cwd: ${process.cwd()})`)
+          cp.execFileSync("/bin/dash", ["-c", `${cmd} | tee ${runnerOutput}`], { stdio: "inherit" })
+          stdout = fs.readFileSync(runnerOutput).toString()
+        } else {
+          stdout = cp.execSync(cmd, { stdio: "pipe", shell: true }).toString()
+        }
+      } catch (err) {
         error = true
+        if (err.code) {
+          app.log(`Command ${cmd} failed with error code ${error.code}`);
+          stdout = err.stdout.toString()
+
+          stderr = err.stderr.toString()
+          if (stderr) {
+            app.log(`stderr: ${stderr.trim()}`);
+          }
+        } else {
+          app.log.error("Caught exception in command execution")
+          app.log.error(err)
+        }
+      } finally {
+        if (shouldLogOutput) {
+          console.log("===> Finished command output")
+        }
       }
 
       return { stdout, stderr, error };
