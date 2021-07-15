@@ -284,6 +284,7 @@ var AcalaRuntimeBenchmarkConfigs = {
             'cargo run --release',
             '--bin=acala',
             '--features=runtime-benchmarks',
+            '--features=with-mandala-runtime',
             '--',
             'benchmark',
             '--chain=dev',
@@ -361,9 +362,17 @@ var AcalaRuntimeBenchmarkConfigs = {
             '--output=./runtime/mandala/src/weights/',
         ].join(' '),
     },
-    "custom": {
-        title: "Benchmark Runtime Custom",
-        branchCommand: 'cargo run --release --bin acala --features runtime-benchmarks -- benchmark',
+    "custom-mandala": {
+        title: "Benchmark Mandala Runtime Custom",
+        branchCommand: 'cargo run --release --bin acala --features=with-mandala-runtime --features runtime-benchmarks -- benchmark',
+    },
+    "custom-karura": {
+        title: "Benchmark Karura Runtime Custom",
+        branchCommand: 'cargo run --release --bin acala --features=with-karura-runtime --features runtime-benchmarks -- benchmark',
+    },
+    "custom-acala": {
+        title: "Benchmark Acala Runtime Custom",
+        branchCommand: 'cargo run --release --bin acala --features=with-acala-runtime --features runtime-benchmarks -- benchmark',
     }
 }
 
@@ -423,7 +432,7 @@ async function benchmarkRuntime(app, config) {
 
         // Append extra flags to the end of the command
         let branchCommand = benchConfig.branchCommand;
-        if (task == "custom") {
+        if (task.startsWith("custom")) {
             // extra here should just be raw arguments to add to the command
             branchCommand += " " + extra;
         } else {
