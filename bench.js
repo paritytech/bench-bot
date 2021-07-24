@@ -281,12 +281,13 @@ var AcalaRuntimeBenchmarkConfigs = {
     "module": {
         title: "Benchmark Runtime Module",
         branchCommand: [
-            'cargo run --release',
+            'cargo run --release --color=never',
             '--bin=acala',
             '--features=runtime-benchmarks',
             '--features=with-mandala-runtime',
             '--',
             'benchmark',
+            '--color=never',
             '--chain=dev',
             '--steps=50',
             '--repeat=20',
@@ -302,12 +303,13 @@ var AcalaRuntimeBenchmarkConfigs = {
     "acala": {
         title: "Benchmark Runtime Acala Module",
         branchCommand: [
-            'cargo run --release',
+            'cargo run --release --color=never',
             '--bin=acala',
             '--features=runtime-benchmarks',
             '--features=with-acala-runtime',
             '--',
             'benchmark',
+            '--color=never',
             '--chain=acala-latest',
             '--steps=50',
             '--repeat=20',
@@ -323,12 +325,13 @@ var AcalaRuntimeBenchmarkConfigs = {
     "karura": {
         title: "Benchmark Runtime Karura Module",
         branchCommand: [
-            'cargo run --release',
+            'cargo run --release --color=never',
             '--bin=acala',
             '--features=runtime-benchmarks',
             '--features=with-karura-runtime',
             '--',
             'benchmark',
+            '--color=never',
             '--chain=karura-latest',
             '--steps=50',
             '--repeat=20',
@@ -344,12 +347,13 @@ var AcalaRuntimeBenchmarkConfigs = {
     "mandala": {
         title: "Benchmark Runtime Mandala Module",
         branchCommand: [
-            'cargo run --release',
+            'cargo run --release --color=never',
             '--bin=acala',
             '--features=runtime-benchmarks',
             '--features=with-mandala-runtime',
             '--',
             'benchmark',
+            '--color=never',
             '--chain=dev',
             '--steps=50',
             '--repeat=20',
@@ -364,15 +368,15 @@ var AcalaRuntimeBenchmarkConfigs = {
     },
     "custom-mandala": {
         title: "Benchmark Mandala Runtime Custom",
-        branchCommand: 'cargo run --release --bin acala --features=with-mandala-runtime --features runtime-benchmarks -- benchmark',
+        branchCommand: 'cargo run --release --color=never --bin acala --features=with-mandala-runtime --features runtime-benchmarks -- benchmark --color=never',
     },
     "custom-karura": {
         title: "Benchmark Karura Runtime Custom",
-        branchCommand: 'cargo run --release --bin acala --features=with-karura-runtime --features runtime-benchmarks -- benchmark',
+        branchCommand: 'cargo run --release --color=never --bin acala --features=with-karura-runtime --features runtime-benchmarks -- benchmark --color=never',
     },
     "custom-acala": {
         title: "Benchmark Acala Runtime Custom",
-        branchCommand: 'cargo run --release --bin acala --features=with-acala-runtime --features runtime-benchmarks -- benchmark',
+        branchCommand: 'cargo run --release --color=never --bin acala --features=with-acala-runtime --features runtime-benchmarks -- benchmark --color=never',
     }
 }
 
