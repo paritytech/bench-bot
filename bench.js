@@ -287,7 +287,6 @@ var AcalaRuntimeBenchmarkConfigs = {
             '--features=with-mandala-runtime',
             '--',
             'benchmark',
-            '--color=never',
             '--chain=dev',
             '--steps=50',
             '--repeat=20',
@@ -309,7 +308,6 @@ var AcalaRuntimeBenchmarkConfigs = {
             '--features=with-acala-runtime',
             '--',
             'benchmark',
-            '--color=never',
             '--chain=acala-latest',
             '--steps=50',
             '--repeat=20',
@@ -331,7 +329,6 @@ var AcalaRuntimeBenchmarkConfigs = {
             '--features=with-karura-runtime',
             '--',
             'benchmark',
-            '--color=never',
             '--chain=karura-latest',
             '--steps=50',
             '--repeat=20',
@@ -353,7 +350,6 @@ var AcalaRuntimeBenchmarkConfigs = {
             '--features=with-mandala-runtime',
             '--',
             'benchmark',
-            '--color=never',
             '--chain=dev',
             '--steps=50',
             '--repeat=20',
@@ -368,15 +364,15 @@ var AcalaRuntimeBenchmarkConfigs = {
     },
     "custom-mandala": {
         title: "Benchmark Mandala Runtime Custom",
-        branchCommand: 'cargo run --release --color=never --bin acala --features=with-mandala-runtime --features runtime-benchmarks -- benchmark --color=never',
+        branchCommand: 'cargo run --release --color=never --bin acala --features=with-mandala-runtime --features runtime-benchmarks -- benchmark',
     },
     "custom-karura": {
         title: "Benchmark Karura Runtime Custom",
-        branchCommand: 'cargo run --release --color=never --bin acala --features=with-karura-runtime --features runtime-benchmarks -- benchmark --color=never',
+        branchCommand: 'cargo run --release --color=never --bin acala --features=with-karura-runtime --features runtime-benchmarks -- benchmark',
     },
     "custom-acala": {
         title: "Benchmark Acala Runtime Custom",
-        branchCommand: 'cargo run --release --color=never --bin acala --features=with-acala-runtime --features runtime-benchmarks -- benchmark --color=never',
+        branchCommand: 'cargo run --release --color=never --bin acala --features=with-acala-runtime --features runtime-benchmarks -- benchmark',
     }
 }
 
