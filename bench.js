@@ -329,7 +329,7 @@ var AcalaRuntimeBenchmarkConfigs = {
             '--features=with-karura-runtime',
             '--',
             'benchmark',
-            '--chain=karura-latest',
+            '--chain=karura-dev',
             '--steps=50',
             '--repeat=20',
             '--pallet={pallet_name}',
