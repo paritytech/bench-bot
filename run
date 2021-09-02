@@ -343,7 +343,8 @@ handle_monitor() {
 
       [Service]
       ExecStart=sh -c \"'$install_location/run' follow_log_file\"
-      Restart=never
+      Restart=always
+      RestartSec=30
       CapabilityBoundingSet=
       LockPersonality=true
       NoNewPrivileges=true
