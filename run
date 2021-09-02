@@ -356,7 +356,7 @@ handle_monitor() {
 
   case "$cmd" in
     install)
-      if [ "${2:-}" != "--force" ] && [ -e "$monitor_service_file" ]; then
+      if [ "${1:-}" != "--force" ] && [ -e "$monitor_service_file" ]; then
         return
       fi
 
