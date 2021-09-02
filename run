@@ -209,12 +209,13 @@ handle_exec() {
         unset start_from_line
       fi
 
-      $cmd_prefix bash -c "
+      nohup $cmd_prefix sh -c "
         . ~/.cargo/env &&
         cd \"$install_location\" &&
         yarn &&
         LOG_FORMAT=json LOG_LEVEL_IN_STRING=true LOG_LEVEL=info yarn start 2>&1 1>>\"$exec_log_file\"
-      " & disown
+      " &
+      disown
 
       echo -e "\nNote: the command will still be running after quitting this terminal. Use \"run stop\" for stopping it.\n"
 
