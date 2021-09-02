@@ -2,19 +2,20 @@
 
 This is a substrate-only bot at the moment.
 
-## How to use
+# How to use
 
 The bot runs commands in response to pull request comments
 ([example](https://github.com/paritytech/polkadot/pull/2541)). The form is:
 
 `/bench [action] [...args]`
 
-For the response to work, [environment variables](#configuration) and
-[Github settings](#github-settings) have to properly configured upfront.
+[Environment variables](#configuration) and
+[Github settings](#required-github-settings) have to properly configured
+upfront for this interaction to work.
 
-## Configuration
+# Configuration
 
-Create an `.env` file in the root with the following:
+Create a `.env` file in the root with the following:
 
 ```
 APP_ID=<App id from Github App Settings>
@@ -26,71 +27,53 @@ WEBHOOK_SECRET=<Webhook secret from Github App Settings>
 WEBHOOK_PROXY_URL=<optional; webhook proxy for development>
 ```
 
-For development it's recommended to use [smee](https://smee.io) for
-`WEBHOOK_PROXY_URL`; that way you can test your changes locally without having
-to SSH into the dedicated machine - it avoids disrupting the production
-service.
+During development it's recommended to use [smee](https://smee.io) for
+`WEBHOOK_PROXY_URL` because it enables testing your bot's functionality
+locally, without having to SSH into the dedicated machine.
 
-## Running
+# Running
 
-### Locally
+## Locally
 
 `yarn && yarn start`
 
-### Dedicated machine
+## Dedicated machine
 
-Note: Before disrupting the production deployment, it's first recommended to
-check if some benchmark is running with `pgrep -au benchbot`. With SSH:
+_Note: Before disrupting the production deployment, it's first recommended to
+check if some benchmark is running through_ `pgrep -a cargo` _._
 
-`ssh user@remote 'sudo pgrep -au benchbot'`
-
-And check if the command above shows any `cargo` or `rust` command being ran
-currently (for the Rust benchmarks).
-
-#### Introduction
-
-The [run](./run) script is used to manage the application.
+The [run script](./run) is used to manage the application. Use `run help` for
+documentation about its options.
 
 `run bootstrap` will take care of creating and installing everything from
-scratch. After installation, a systemd service will be created for you to
-manage with `run {start,restart,stop,status}` which acts as a wrapper for
-`systemctl`.
+scratch. For it to fully work, you'll also need to set up [environment
+variables](#configuration) which optionally can be done through a `.env` file
+in the bot's directory.
 
-#### Updating branches
+### Bot commands
 
-The `update` subcommand will fetch and restart the bot with the selected branch. e.g.
+- `run {start,stop,restart}`: execute the relevant action for the bot.
+- `run update [ref]`: restart the bot with the branch or PR
+  - For branch: `ssh user@remote '/home/benchbot/bench-bot/run update master'`
+  - For PR: `ssh user@remote '/home/benchbot/bench-bot/run update pull/number/head:branch'` 
+    e.g. `pull/1/head:master`
 
-`ssh user@remote '/home/benchbot/bench-bot/run update master'`
+### Monitoring Service commands
 
-For pull requests, the format is `pull/${ID}/head:${BRANCH}` as per the
-[Github specification](https://docs.github.com/en/github/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally#modifying-an-inactive-pull-request-locally). e.g.
+- `run monitor {install,uninstall}`: install or uninstall the monitoring
+  service
+- `run monitor {start,restart,stop,status,...}`: acts as a wrapper for
+  `systemctl`
 
-`ssh user@remote '/home/benchbot/bench-bot/run update pull/1/head:branch'`
+### Logs
 
-#### Setting up
+The logs will be output to the systemd journal:
 
-By default the bot will be bootstrapped to `/home/benchbot/bench-bot` and
-executed by the `benchbot` user. From your machine, execute the `run` script
-remotely with SSH:
-
-`ssh user@remote '/home/benchbot/bench-bot/run [command]'`
-
-e.g.
-
-`ssh user@remote '/home/benchbot/bench-bot/run restart'`
-
-
-#### Additional information
-
-The full explanation for all commands is available with `run help`.
-
-After it's running, the logs will be to the systemd journal:
-
-`sudo journalctl -u benchbot.service`
+`sudo journalctl -u benchbot-monitor.service`
 
 As well as to `./log.txt`.
 
-# Github Settings
+# Required Github settings
 
 ## Permissions
 

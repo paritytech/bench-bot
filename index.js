@@ -7,7 +7,31 @@ var { benchBranch, benchmarkRuntime } = require("./bench")
 const githubCommentLimitLength = 65536
 const githubCommentLimitTruncateMessage = "<truncated>..."
 
+let isTerminating = false
+let appFatalLogger = undefined
+
+for (const event of ["uncaughtException", "unhandledRejection"]) {
+  process.on(event, function (error, origin) {
+    if (isTerminating) {
+      return
+    }
+    isTerminating = true
+
+    try {
+      if (appFatalLogger) {
+        appFatalLogger({ event, error, origin })
+      }
+    } catch (error) {
+      console.error({ level: "error", event, error, origin, exception })
+    }
+
+    process.exit(1)
+  })
+}
+
 module.exports = (app) => {
+  appFatalLogger = app.log.fatal
+
   const baseBranch = process.env.BASE_BRANCH || "master"
   app.log.debug(`base branch: ${baseBranch}`)
 
@@ -54,10 +78,7 @@ module.exports = (app) => {
 
       const getPushDomain = async function () {
         const token = (
-          await authInstallation({
-            type: "installation",
-            installationId,
-          })
+          await authInstallation({ type: "installation", installationId })
         ).token
 
         const url = `https://x-access-token:${token}@github.com`
@@ -169,7 +190,13 @@ ${extraInfo}
         body,
       })
     } catch (error) {
-      app.log.error(error)
+      app.log.fatal({
+        error,
+        repo,
+        owner,
+        pull_number,
+        msg: "Caught exception in issue_comment's handler",
+      })
       await context.octokit.issues.createComment(
         context.issue({
           body: `Exception caught: \`${error.message}\`\n${error.stack}`,

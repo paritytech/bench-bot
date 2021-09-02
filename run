@@ -6,7 +6,6 @@ info_tag="[info]"
 log_error() {
   >&2 echo "$err_tag $1"
 }
-
 log() {
   echo "$info_tag $1"
 }
@@ -25,52 +24,88 @@ exit_if_error() {
   exit_with_error "${1:-Command failed}" $?
 }
 
+check_executables() {
+  for exe in "${executables[@]}"; do
+    if !which "$exe" &>/dev/null; then
+      exit_with_error "Executable is missing: $exe"
+    fi
+  done
+}
+
+check_monitor_runtime_executables() {
+  executables=(
+    tail inotifywait wc cut
+  )
+  check_executables
+}
+
+check_app_runtime_executables() {
+  if [ -e ~/.cargo/env ]; then
+    . ~/.cargo/env
+  fi
+  executables=(
+    rustup cargo git bash
+  )
+  check_executables
+}
+
 remote_repo_name="bench-bot"
 remote_repo="https://github.com/paritytech/$remote_repo_name"
 
 benchbot_user="benchbot"
-benchbot_service="benchbot.service"
-install_parent="/home/$benchbot_user"
-install_location="$install_parent/bench-bot"
+benchbot_session="/tmp/bench-bot"
+install_location="/home/$benchbot_user/bench-bot"
+
+exec_log_dir_parent="/home/$benchbot_user"
+exec_log_dir="$install_location"
+exec_log_file_name="log.txt"
+exec_log_file="$exec_log_dir/$exec_log_file_name"
+
+monitor_service="benchbot-monitor"
+monitor_service_dir="/usr/lib/systemd/system"
+monitor_service_file="$monitor_service_dir/$monitor_service.service"
 
 print_help_and_exit() {
 echo "
 Usage: run [command]
 
 Commands:
-  help:
-    Print this message and exit
-
-
   bootstrap:
     Bootstrap the bot to its predefined location ($install_location).
 
-    Underneath, it invokes subcommands which can be also ran individually.
-    Use them with '--force' in order to overwrite an existing installation:
-      - install_service
-      - install_repo
-      - install_deps
+  start, stop, restart:
+    Execute the relevant subcommand for the bot's process.
 
+  monitor:
+    Use 'monitor install' or 'monitor uninstall' for setting up the bot's
+    monitoring service.
+    Otherwise, the arguments are forwarded to systemctl.
 
-  start/stop/restart:
-    As the name implies
+  update [ref]:
+    Pull a ref (branch or pull request) from $remote_repo, install it and
+    restart the bot.
 
+    For pull requests:
+      update pull/number/head:branch (e.g. pull/1/head:master)
 
-  update [branch]:
-    Pull a branch from $remote_repo, install it and restart the bot
+    For branches:
+      update branch
+
+  help:
+    Print this message and exit
 "
   exit $1
 }
 
 current_user="${USER:-$(whoami 2>/dev/null)}"
 if [ "$current_user" != "$benchbot_user" ]; then
-  cmd_prefix="sudo -u $benchbot_user"
+  as_benchbot="sudo -u $benchbot_user"
 fi
 
 install_deps() {
   # needed to detect rustup if it's installed
   if [ -e ~/.cargo/env ]; then
-    source ~/.cargo/env
+    . ~/.cargo/env
   fi
 
   if [ "${2:-}" == "--force" ] || ! which rustup &>/dev/null; then
@@ -90,67 +125,7 @@ install_deps() {
   fi
 }
 
-install_service() {
-  local target_dir="/usr/lib/systemd/system"
-  local target_service_file="$target_dir/$benchbot_service"
-
-  if [ "${2:-}" != "--force" ] && [ -e "$target_service_file" ]; then
-    return
-  fi
-
-  &>/dev/null sudo mkdir -p "$target_dir"
-
-echo "
-[Unit]
-Description=Bench Bot
-After=network.target
-Documentation=$remote_repo
-
-[Service]
-ExecStart=/bin/bash -c 'cd \"$install_location\" && ./run main'
-User=$benchbot_user
-Restart=always
-RestartSec=30
-CapabilityBoundingSet=
-LockPersonality=true
-NoNewPrivileges=true
-PrivateDevices=true
-PrivateMounts=true
-PrivateTmp=true
-PrivateUsers=true
-ProtectControlGroups=true
-ProtectHostname=true
-ProtectKernelModules=true
-ProtectKernelTunables=true
-ProtectSystem=strict
-RemoveIPC=true
-RestrictNamespaces=true
-RestrictSUIDSGID=true
-SystemCallArchitectures=native
-
-[Install]
-WantedBy=default.target
-" | sudo tee "$target_service_file" >/dev/null
-
-  exit_if_error "Failed to create service file at $target_service_file"
-}
-
-main() {
-  source ~/.cargo/env && \
-  cd "$install_location" && \
-  yarn && \
-  yarn start 2>&1 | tee -a log.txt
-}
-
-follow_service_logs() {
-  sudo journalctl -u "$benchbot_service" --follow --since "$1"
-}
-
-service() {
-  sudo systemctl "$1" "$benchbot_service" 
-}
-
-create_benchbot_user() {
+create_bot_user() {
   if id "$benchbot_user" &>/dev/null; then
     return
   fi
@@ -169,8 +144,8 @@ install_repo() {
     return
   fi
 
-  mkdir -p "$install_parent" && cd "$install_parent"
-  exit_if_error "Failed to create and enter $install_parent"
+  mkdir -p "$install_location"
+  exit_if_error "Failed to create $install_parent"
 
   git clone "$remote_repo" "$install_location"
   exit_if_error "Failed to clone $remote_repo to $install_location"
@@ -179,7 +154,7 @@ install_repo() {
   exit_if_error "Failed to install dependencies in $install_location"
 }
 
-install_branch() {
+install_ref() {
   local ref="${1:-}"
   if [ ! "$ref" ]; then
     log_error "Ref needs to be supplied"
@@ -189,7 +164,7 @@ install_branch() {
   cd "$install_location"
   exit_if_error "Failed to cd into $install_location"
 
-  detached_head="$(git rev-parse HEAD)"
+  local detached_head="$(git rev-parse HEAD)"
   exit_if_error "Failed to get current HEAD sha"
 
   git checkout "$detached_head" >/dev/null
@@ -238,63 +213,275 @@ install_branch() {
   git switch -c "$branch"
   exit_if_error "Failed to switch from detached head to branch $branch (ref $ref, commit $ref_commit)"
 
-  git rev-parse HEAD
+  local head_sha="$(git rev-parse HEAD)"
+  exit_if_error "Failed to parse the HEAD commit SHA for $branch (ref $ref, commit $ref_commit)"
+
+  log "Installed branch '$branch' at $head_sha"
 }
 
-case "$1" in
-  bootstrap)
-    create_benchbot_user
-    exit_if_error "Failed to create $benchbot_user user"
+handle_exec() {
+  local cmd="$1"
+  shift
 
-    $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_deps"
-    exit_if_error "Failed to install dependencies"
+  case "$cmd" in
+    start)
+      if [ -e "$exec_log_file" ]; then
+        local start_from_line="$(wc -l "$exec_log_file" | cut -d ' ' -f1)"
+        exit_if_error "Failed to count the lines in $exec_log_file"
+        start_from_line=$(( start_from_line + 1 ))
+      else
+        echo "" > "$exec_log_file"
+        unset start_from_line
+      fi
 
-    $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_repo"
-    exit_if_error "Failed to install repository"
+      $as_benchbot tmux new-session -d "
+        . ~/.cargo/env &&
+        cd \"$install_location\" &&
+        yarn &&
+        LOG_FORMAT=json LOG_LEVEL_IN_STRING=true LOG_LEVEL=info yarn start 2>&1 1>>\"$exec_log_file\"
+      "
+      exit_if_error "Failed to create tmux session for user $benchbot_user"
 
-    install_service
-    exit_if_error "Failed to install service"
-  ;;
-  start|stop|restart|status)
-    start_date="$(date +"%Y-%m-%d %H:%M")"
+      echo -e "\nNote: the command will still be running after quitting this terminal. Use \"run stop\" for stopping it.\n"
 
-    service "$1"
-    echo "Exit code: $?"
+      tail "--lines=+${start_from_line:-0}" -f "$exec_log_file"
+    ;;
+    stop)
+      if pgrep -u benchbot &>/dev/null; then
+        sudo pkill -u benchbot
+      else
+        return 0
+      fi
+    ;;
+    restart)
+      handle_exec stop
+      handle_exec start "$@"
+    ;;
+    *)
+      exit_with_error "Unknown handle_exec command $cmd"
+    ;;
+  esac
+}
 
-    case "$1" in
-      start|restart)
-        exit_if_error "Failed to $1 service"
+stop_follow_log_file() {
+  if [ ! "${follow_log_file_tail_pid:-}" ]; then
+    return
+  fi
 
-        follow_service_logs "$start_date"
-      ;;
-    esac
-  ;;
-  main|install_service|install_repo|install_branch|install_deps)
-    $@
-  ;;
-  update)
-    branch="${2:-}"
-    if [ ! "$branch" ]; then
-      log_error "Branch name needs to be supplied"
-      print_help_and_exit 1
+  kill -9 "$follow_log_file_tail_pid"
+  exit_if_error "Failed to kill tail process $follow_log_file_tail_pid"
+
+  unset follow_log_file_tail_pid
+}
+
+start_follow_log_file() {
+  stop_follow_log_file
+
+  local start_from_line="$(wc -l "$exec_log_file" | cut -d ' ' -f1)"
+  exit_if_error "Failed to count the lines in $exec_log_file"
+  start_from_line=$(( start_from_line + 1 ))
+  tail "--lines=+$start_from_line" -f "$exec_log_file" &
+  follow_log_file_tail_pid=$?
+}
+
+parse_log_file_notification_line() {
+  if [[ ! "$1" =~ ^([^[:space:]]+)[[:space:]]+(.*)  ]]; then
+    exit_with_error "Notification line did not have the expected format"
+  fi
+}
+
+follow_log_file() {
+  while true; do
+    # Monitor the log file while it exists
+    if [ -e "$exec_log_dir" ]; then
+      start_follow_log_file
+
+      while IFS= read line; do
+        parse_log_file_notification_line "$line"
+
+        local event="${BASH_REMATCH[1]}"
+        case "$event" in
+          DELETE_SELF)
+            break
+          ;;
+        esac
+
+        local file="${BASH_REMATCH[2]}"
+        if [ "$file" != "$exec_log_file_name" ]; then
+          continue
+        fi
+
+        case "$event" in
+          CREATE)
+            start_follow_log_file
+          ;;
+          DELETE)
+            stop_follow_log_file
+          ;;
+          *)
+            exit_with_error "Unhandled event $event for $exec_log_dir"
+          ;;
+        esac
+      done < <(inotifywait -e create,delete,delete_self --format '%e %f' --monitor --quiet "$exec_log_dir")
+    # If the log file does not exist, then wait for the log file's directory to
+    # be created
+    elif [ -e "$exec_log_dir_parent" ]; then
+      while IFS= read line; do
+        parse_log_file_notification_line "$line"
+
+        local event="${BASH_REMATCH[1]}"
+        case "$event" in
+          DELETE_SELF)
+            break
+          ;;
+          CREATE)
+            if [ "$exec_log_dir_parent/$file" = "$exec_log_dir" ]; then
+              break
+            fi
+          ;;
+          *)
+            exit_with_error "Unhandled event $event for $exec_log_dir_parent"
+          ;;
+        esac
+      done < <(inotifywait -e create,delete_self --format '%e %f' --monitor --quiet "$exec_log_dir_parent")
+    else
+      exit_with_error "Unable to watch '$exec_log_dir_parent' for '$exec_log_dir'"
     fi
+  done
+}
 
-    service stop
+handle_monitor() {
+  local cmd="$1"
+  shift
 
-    $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_branch '$branch'"
-    exit_if_error "Failed to checkout to branch $branch"
+  case "$cmd" in
+    install)
+      if [ "${1:-}" != "--force" ] && [ -e "$monitor_service_file" ]; then
+        return
+      fi
 
-    start_date="$(date +"%Y-%m-%d %H:%M")"
-    service start
-    exit_if_error "Failed to restart service"
+      &>/dev/null sudo mkdir -p "$monitor_service_dir"
 
-    follow_service_logs "$start_date"
-  ;;
-  help)
-    print_help_and_exit 0
-  ;;
-  *)
-    log_error "Invalid command $1"
-    print_help_and_exit 1
-  ;;
-esac
+      echo "
+      [Unit]
+      Description=Bench Bot Monitor
+      Documentation=$remote_repo
+
+      [Service]
+      ExecStart=sh -c \"'$install_location/run' follow_log_file\"
+      Restart=always
+      RestartSec=30
+      CapabilityBoundingSet=
+      LockPersonality=true
+      NoNewPrivileges=true
+      PrivateDevices=true
+      PrivateMounts=true
+      PrivateTmp=true
+      PrivateUsers=true
+      ProtectControlGroups=true
+      ProtectHostname=true
+      ProtectKernelModules=true
+      ProtectKernelTunables=true
+      ProtectSystem=strict
+      RemoveIPC=true
+      RestrictNamespaces=true
+      RestrictSUIDSGID=true
+      SystemCallArchitectures=native
+
+      [Install]
+      WantedBy=default.target
+      " | sudo tee "$monitor_service_file" >/dev/null
+
+      exit_if_error "Failed to create service file at $monitor_service_file"
+
+      if [ -e "$exec_log_file" ]; then
+        sudo systemctl enable --now "$monitor_service"
+      else
+        log "Start the service later with \"run monitor enable --now\""
+      fi
+    ;;
+    uninstall)
+      if systemctl is-active --quiet "$monitor_service"; then
+        sudo systemctl disable --now "$monitor_service"
+        exit_if_error "Failed to disable service $monitor_service"
+      fi
+      sudo rm "$monitor_service_file"
+    ;;
+    *)
+      sudo systemctl "$cmd" "$monitor_service" "$@"
+    ;;
+  esac
+}
+
+main() {
+  local cmd="$1"
+  shift
+
+  # Initial checks before running the actual commands
+  case "$cmd" in
+    start|stop|restart|update)
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' check_app_runtime_executables"
+      exit_if_error
+    ;;
+    monitor)
+      check_monitor_runtime_executables
+    ;;
+  esac
+
+  case "$cmd" in
+    start|stop|restart)
+      handle_exec "$cmd" "$@"
+      local exit_code=$?
+      echo "Exit code: $exit_code"
+      exit $exit_code
+    ;;
+    update)
+      local ref="${1:-}"
+      if [ ! "$ref" ]; then
+        log_error "Ref needs to be supplied"
+        print_help_and_exit 1
+      fi
+
+      handle_exec stop
+
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' install_ref '$ref'"
+      exit_if_error "Failed to install ref '$ref'"
+
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' start"
+      exit_if_error "Failed to start"
+    ;;
+    monitor)
+      "handle_$cmd" "$@"
+      local exit_code=$?
+      echo "Exit code: $exit_code"
+      exit $exit_code
+    ;;
+    follow_log_file            | \
+    install_repo               | \
+    install_ref                | \
+    install_deps               | \
+    check_app_runtime_executables)
+      "$cmd" "$@"
+    ;;
+    bootstrap)
+      create_bot_user
+
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' install_deps"
+      exit_if_error "Failed to install dependencies"
+
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' install_repo"
+      exit_if_error "Failed to install repository"
+
+      handle_monitor install
+    ;;
+    help)
+      print_help_and_exit 0
+    ;;
+    *)
+      log_error "Invalid command $cmd"
+      print_help_and_exit 1
+    ;;
+  esac
+}
+
+main "$@"
