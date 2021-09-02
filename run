@@ -74,7 +74,7 @@ Commands:
 
 current_user="${USER:-$(whoami 2>/dev/null)}"
 if [ "$current_user" != "$benchbot_user" ]; then
-  cmd_prefix="sudo -u $benchbot_user"
+  as_benchbot="sudo -u $benchbot_user"
 fi
 
 install_deps() {
@@ -209,7 +209,7 @@ handle_exec() {
         unset start_from_line
       fi
 
-      $cmd_prefix bash -c "
+      $as_benchbot bash -c "
         tmux new-session -d '
         . ~/.cargo/env &&
         cd \"$install_location\" &&
@@ -409,10 +409,10 @@ main() {
       handle_exec stop
       exit_if_error "Failed to stop"
 
-      $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_ref '$ref'"
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' install_ref '$ref'"
       exit_if_error "Failed to install ref '$ref'"
 
-      $cmd_prefix bash -c "'${BASH_SOURCE[0]}' start"
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' start"
       exit_if_error "Failed to start"
     ;;
     monitor)
@@ -428,10 +428,10 @@ main() {
       create_bot_user
       exit_if_error "Failed to create the bot's user"
 
-      $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_deps"
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' install_deps"
       exit_if_error "Failed to install dependencies"
 
-      $cmd_prefix bash -c "'${BASH_SOURCE[0]}' install_repo"
+      $as_benchbot bash -c "'${BASH_SOURCE[0]}' install_repo"
       exit_if_error "Failed to install repository"
 
       handle_monitor install
