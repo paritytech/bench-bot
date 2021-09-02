@@ -8,6 +8,13 @@ const githubCommentLimitLength = 65536
 const githubCommentLimitTruncateMessage = "<truncated>..."
 
 module.exports = (app) => {
+  for (const event of ["uncaughtException", "unhandledRejection"]) {
+    process.on(event, function (error, origin) {
+      app.log.fatal({ event, error, origin })
+      process.exit(1)
+    })
+  }
+
   const baseBranch = process.env.BASE_BRANCH || "master"
   app.log.debug(`base branch: ${baseBranch}`)
 
@@ -54,10 +61,7 @@ module.exports = (app) => {
 
       const getPushDomain = async function () {
         const token = (
-          await authInstallation({
-            type: "installation",
-            installationId,
-          })
+          await authInstallation({ type: "installation", installationId })
         ).token
 
         const url = `https://x-access-token:${token}@github.com`
@@ -169,7 +173,13 @@ ${extraInfo}
         body,
       })
     } catch (error) {
-      app.log.error(error)
+      app.log.fatal({
+        error,
+        repo,
+        owner,
+        pull_number,
+        msg: "Caught exception in issue_comment's handler",
+      })
       await context.octokit.issues.createComment(
         context.issue({
           body: `Exception caught: \`${error.message}\`\n${error.stack}`,

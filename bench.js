@@ -6,7 +6,6 @@ function errorResult(message, error) {
 }
 
 let cwd = process.cwd();
-console.log(`process cwd: ${cwd}`);
 
 const Mutex = require('async-mutex').Mutex;
 const mutex = new Mutex();
@@ -21,38 +20,43 @@ function BenchContext(app, config) {
 
     self.runTask = async function(cmd, { title, shouldLogOutput } = {}) {
       if (title) {
-        app.log(title)
+        app.log({ title, msg: `Running task on directory ${process.cwd()}` })
       }
 
       let stdout = "", stderr = "", error = false
 
       try {
-        if (shouldLogOutput) {
-          console.log(`<=== Start command output (cwd: ${process.cwd()})`)
-        }
-
         await new Promise(function (resolve) {
           const proc = cp.spawn("/bin/bash", ["-c", cmd], { stdio: "pipe" })
 
-          proc.stdout.on("data", function (data) {
-            data = data.toString()
+          const getStreamCallback = function(channel) {
+            return function (data) {
+              data = data.toString()
 
-            if (data && shouldLogOutput) {
-              console.log(data.trim())
+              if (shouldLogOutput) {
+                const msg = data.trim()
+                if (msg) {
+                  app.log({ msg, channel })
+                }
+              }
+
+              switch (channel) {
+                case "stderr": {
+                  stderr += data
+                  break
+                }
+                case "stdout": {
+                  stdout += data
+                  break
+                }
+                default: {
+                  throw new Error(`Got unexpected process channel ${channel}`)
+                }
+              }
             }
-
-            stdout += data
-          })
-
-          proc.stderr.on("data", function (data) {
-            data = data.toString()
-
-            if (data && shouldLogOutput) {
-              console.log(data.trim())
-            }
-
-            stderr += data
-          })
+          }
+          proc.stdout.on("data", getStreamCallback("stdout"))
+          proc.stderr.on("data", getStreamCallback("stderr"))
 
           proc.on("close", function (code) {
             error = !!code
@@ -65,12 +69,7 @@ function BenchContext(app, config) {
           stdout = err.stdout.toString()
           stderr = err.stderr.toString()
         } else {
-          app.log.error("Caught exception in command execution")
-          app.log.error(err)
-        }
-      } finally {
-        if (shouldLogOutput) {
-          console.log("===> Finished command output")
+          app.log.fatal({ msg: "Caught exception in command execution", err })
         }
       }
 
