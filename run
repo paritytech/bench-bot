@@ -389,7 +389,7 @@ main() {
       exit $exit_code
     ;;
     update)
-      local branch="${2:-}"
+      local branch="${1:-}"
       if [ ! "$branch" ]; then
         log_error "Branch name needs to be supplied"
         print_help_and_exit 1
