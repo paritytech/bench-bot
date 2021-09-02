@@ -225,6 +225,8 @@ handle_exec() {
     stop)
       if pgrep -u benchbot &>/dev/null; then
         sudo pkill -u benchbot
+      else
+        return 0
       fi
     ;;
     restart)
