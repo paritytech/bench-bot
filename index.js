@@ -7,13 +7,30 @@ var { benchBranch, benchmarkRuntime } = require("./bench")
 const githubCommentLimitLength = 65536
 const githubCommentLimitTruncateMessage = "<truncated>..."
 
+let isTerminating = false
+let appFatalLogger = undefined
+
+for (const event of ["uncaughtException", "unhandledRejection"]) {
+  process.on(event, function (error, origin) {
+    if (isTerminating) {
+      return
+    }
+    isTerminating = true
+
+    try {
+      if (appFatalLogger) {
+        appFatalLogger({ event, error, origin })
+      }
+    } catch (error) {
+      console.error({ level: "error", event, error, origin, exception })
+    }
+
+    process.exit(1)
+  })
+}
+
 module.exports = (app) => {
-  for (const event of ["uncaughtException", "unhandledRejection"]) {
-    process.on(event, function (error, origin) {
-      app.log.fatal({ event, error, origin })
-      process.exit(1)
-    })
-  }
+  appFatalLogger = app.log.fatal
 
   const baseBranch = process.env.BASE_BRANCH || "master"
   app.log.debug(`base branch: ${baseBranch}`)
