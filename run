@@ -250,7 +250,11 @@ stop_follow_log_file() {
 
 start_follow_log_file() {
   stop_follow_log_file
-  tail -f "$exec_log_file" &
+
+  local start_from_line="$(wc -l "$exec_log_file" | cut -d ' ' -f1)"
+  exit_if_error "Failed to count the lines in $exec_log_file"
+  start_from_line=$(( start_from_line + 1 ))
+  tail "--lines=+$start_from_line" -f "$exec_log_file" &
   follow_log_file_tail_pid=$?
 }
 
