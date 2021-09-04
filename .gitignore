@@ -2,4 +2,3 @@ node_modules
 *.pem
 .env
 git
-log.txt
