@@ -400,7 +400,8 @@ function benchmarkRuntime(app, config) {
                   }
                 }
               } catch (error) {
-                extraInfo = `NOTE: Failed to push commits to repository: ${error.toString().replace(token, "{secret}", "g")}`
+                extraInfo = "NOTE: Caught exception while trying to push commits to the repository"
+                app.log.fatal({ msg: extraInfo, error })
               }
             }
           }
