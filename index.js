@@ -1,6 +1,7 @@
 const { createAppAuth } = require("@octokit/auth-app")
 const assert = require("assert")
 const fs = require("fs")
+const shell = require('shelljs');
 
 var { benchBranch, benchmarkRuntime } = require("./bench")
 
@@ -30,6 +31,10 @@ for (const event of ["uncaughtException", "unhandledRejection"]) {
 }
 
 module.exports = (app) => {
+  if (process.env.DEBUG) {
+    app.log("Running in debug mode")
+  }
+
   appFatalLogger = app.log.fatal
 
   const baseBranch = process.env.BASE_BRANCH || "master"
@@ -99,13 +104,31 @@ module.exports = (app) => {
       const branch = pr.data.head.ref
       app.log.debug(`branch: ${branch}`)
 
-      const issueComment = context.issue({
-        body: `Starting benchmark for branch: ${branch} (vs ${baseBranch})\n\n Comment will be updated.`,
-      })
-      const issue_comment = await context.octokit.issues.createComment(
-        issueComment,
-      )
-      const comment_id = issue_comment.data.id
+      var { stdout: toolchain, code: toolchainError } = shell.exec("rustup show active-toolchain --verbose", { silent: false });
+      if (toolchainError) {
+        await context.octokit.issues.createComment(
+          context.issue({
+            body: "ERROR: Failed to query the currently active Rust toolchain",
+          })
+        )
+        return
+      } else {
+        toolchain = toolchain.trim()
+      }
+
+      const initialInfo = `Starting benchmark for branch: ${branch} (vs ${baseBranch})\n\nToolchain: \n${toolchain}\n\n Comment will be updated.`
+      let comment_id = undefined
+      if (process.env.DEBUG) {
+        app.log(initialInfo)
+      } else {
+        const issueComment = context.issue({
+          body: initialInfo
+        })
+        const issue_comment = await context.octokit.issues.createComment(
+          issueComment,
+        )
+        comment_id = issue_comment.data.id
+      }
 
       let config = {
         owner,
@@ -123,6 +146,10 @@ module.exports = (app) => {
         report = await benchmarkRuntime(app, config)
       } else {
         report = await benchBranch(app, config)
+      }
+      if (process.env.DEBUG) {
+        console.log(report)
+        return
       }
 
       if (report.isError) {
