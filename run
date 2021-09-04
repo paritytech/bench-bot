@@ -483,7 +483,6 @@ main() {
     ;;
     bootstrap)
       create_bot_user
-      exit_if_error "Failed to create user $benchbot_user"
 
       $as_benchbot bash -c "'${BASH_SOURCE[0]}' install_deps"
       exit_if_error "Failed to install dependencies"
@@ -492,7 +491,6 @@ main() {
       exit_if_error "Failed to install repository"
 
       handle_monitor install
-      exit_if_error "Failed to install and enable monitoring service"
     ;;
     help)
       print_help_and_exit 0
