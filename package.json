@@ -10,9 +10,11 @@
   "scripts": {
     "dev": "nodemon",
     "start": "probot run ./index.js",
-    "lint": "standard --fix",
     "test": "mocha",
-    "test:watch": "jest --watch --notify --notifyMode=change --coverage"
+    "test:watch": "jest --watch --notify --notifyMode=change --coverage",
+    "prettier": "prettier '{*,**/*}.{js,json,yaml,html}'",
+    "format": "yarn run prettier --write",
+    "lint": "yarn run prettier --check"
   },
   "dependencies": {
     "@octokit/auth-app": "^3.5.3",
