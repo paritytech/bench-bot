@@ -21,7 +21,7 @@ module.exports = app => {
       app.log('execute clean command');
       shell.exec("rm -rf git", { silent: false });
       const issueComment = context.issue({ body: `Clean done` });
-      await context.github.issues.createComment(issueComment);
+      await context.octokit.issues.createComment(issueComment);
       return;
     }
 
@@ -29,11 +29,11 @@ module.exports = app => {
     const owner = context.payload.repository.owner.login;
     const pull_number = context.payload.issue.number;
 
-    let pr = await context.github.pulls.get({ owner, repo, pull_number });
+    let pr = await context.octokit.pulls.get({ owner, repo, pull_number });
     const branchName = pr.data.head.ref;
     app.log(`branch: ${branchName}`);
     const issueComment = context.issue({ body: `Starting benchmark for branch: ${branchName} (vs ${process.env.BASE_BRANCH})\n\n Comment will be updated.` });
-    const issue_comment = await context.github.issues.createComment(issueComment);
+    const issue_comment = await context.octokit.issues.createComment(issueComment);
     const comment_id = issue_comment.data.id;
 
     let config = {
@@ -56,19 +56,19 @@ module.exports = app => {
     if (report.error) {
       app.log(`error: ${report.stderr}`)
       if (report.step != "merge") {
-        context.github.issues.updateComment({
+        context.octokit.issues.updateComment({
           owner, repo, comment_id,
           body: `Error running benchmark: **${branchName}**\n\n<details><summary>stdout</summary>${report.stderr}</details>`,
         });
       } else {
-        context.github.issues.updateComment({
+        context.octokit.issues.updateComment({
           owner, repo, comment_id,
           body: `Error running benchmark: **${branchName}**\n\nMerge conflict merging branch to master!`,
         });
       }
     } else {
       app.log(`report: ${report}`);
-      context.github.issues.updateComment({
+      context.octokit.issues.updateComment({
         owner, repo, comment_id,
         body: `Finished benchmark for branch: **${branchName}**\n\n${report}`,
       });
