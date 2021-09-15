@@ -31,6 +31,11 @@ During development it's recommended to use [smee](https://smee.io) for
 `WEBHOOK_PROXY_URL` because it enables testing your bot's functionality
 locally, without having to SSH into the dedicated machine.
 
+# Linting and formatting
+
+The commands `yarn run format` and `yarn run lint` are available for ensuring
+style consistency on this project's code.
+
 # Running
 
 ## Locally

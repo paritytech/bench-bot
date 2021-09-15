@@ -1,7 +1,7 @@
 const { createAppAuth } = require("@octokit/auth-app")
 const assert = require("assert")
 const fs = require("fs")
-const shell = require('shelljs');
+const shell = require("shelljs")
 
 var { benchBranch, benchmarkRuntime } = require("./bench")
 
@@ -104,12 +104,15 @@ module.exports = (app) => {
       const branch = pr.data.head.ref
       app.log.debug(`branch: ${branch}`)
 
-      var { stdout: toolchain, code: toolchainError } = shell.exec("rustup show active-toolchain --verbose", { silent: false });
+      var { stdout: toolchain, code: toolchainError } = shell.exec(
+        "rustup show active-toolchain --verbose",
+        { silent: false },
+      )
       if (toolchainError) {
         await context.octokit.issues.createComment(
           context.issue({
             body: "ERROR: Failed to query the currently active Rust toolchain",
-          })
+          }),
         )
         return
       } else {
@@ -121,9 +124,7 @@ module.exports = (app) => {
       if (process.env.DEBUG) {
         app.log(initialInfo)
       } else {
-        const issueComment = context.issue({
-          body: initialInfo
-        })
+        const issueComment = context.issue({ body: initialInfo })
         const issue_comment = await context.octokit.issues.createComment(
           issueComment,
         )

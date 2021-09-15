@@ -10,9 +10,11 @@
   "scripts": {
     "dev": "nodemon",
     "start": "probot run ./index.js",
-    "lint": "standard --fix",
     "test": "mocha",
-    "test:watch": "jest --watch --notify --notifyMode=change --coverage"
+    "test:watch": "jest --watch --notify --notifyMode=change --coverage",
+    "prettier": "prettier '{*,**/*}.{js,json,yaml,html}'",
+    "format": "yarn run prettier --write",
+    "lint": "yarn run prettier --check"
   },
   "dependencies": {
     "@octokit/auth-app": "^3.5.3",
@@ -23,7 +25,9 @@
   },
   "devDependencies": {
     "jest": "^27.0.6",
-    "nodemon": "^2.0.9"
+    "nodemon": "^2.0.9",
+    "prettier": "^2.4.0",
+    "prettier-plugin-compactify": "^0.1.4"
   },
   "nodemonConfig": {
     "exec": "npm start",
