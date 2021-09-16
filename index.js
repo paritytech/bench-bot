@@ -111,11 +111,14 @@ module.exports = (app) => {
         "rustup show active-toolchain --verbose",
       )
       if (error) {
-        await context.octokit.issues.createComment(
-          context.issue({
-            body: "ERROR: Failed to query the currently active Rust toolchain",
-          }),
-        )
+        const msg = "ERROR: Failed to query the currently active Rust toolchain"
+        if (process.env.DEBUG) {
+          app.logFatalError(error, msg)
+        } else {
+          await context.octokit.issues.createComment(
+            context.issue({ body: msg }),
+          )
+        }
         return
       } else {
         toolchain = toolchain.trim()
@@ -220,7 +223,6 @@ ${extraInfo}
         body,
       })
     } catch (error) {
-    console.log({ error })
       runner.logFatalError(error, {
         msg: "Caught exception in issue_comment's handler",
         payload: context.payload,
