@@ -144,6 +144,7 @@ module.exports = (app) => {
         getPushDomain,
       }
 
+      console.log({ config })
       let report
       if (action == "runtime" || action == "xcm") {
         report = await benchmarkRuntime(runner, config)
@@ -220,6 +221,7 @@ ${extraInfo}
         body,
       })
     } catch (error) {
+    console.log({ error })
       runner.logFatalError(error, {
         msg: "Caught exception in issue_comment's handler",
         payload: context.payload,
