@@ -304,6 +304,93 @@ var PolkadotRuntimeBenchmarkConfigs = {
   },
 }
 
+var PolkadotXcmBenchmarkConfigs = {
+  pallet: {
+    title: "XCM",
+    benchCommand: [
+      "cargo run --quiet --release",
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=polkadot-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
+      "--output=./runtime/polkadot/src/weights/xcm/{output_file}",
+    ].join(" "),
+  },
+  polkadot: {
+    title: "Polkadot XCM",
+    benchCommand: [
+      "cargo run --quiet --release",
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=polkadot-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
+      "--output=./runtime/polkadot/src/weights/xcm/{output_file}",
+    ].join(" "),
+  },
+  kusama: {
+    title: "Kusama XCM",
+    benchCommand: [
+      "cargo run --quiet --release",
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=kusama-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
+      "--output=./runtime/kusama/src/weights/xcm/{output_file}",
+    ].join(" "),
+  },
+  westend: {
+    title: "Westend XCM",
+    benchCommand: [
+      "cargo run --quiet --release",
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=westend-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
+      "--output=./runtime/westend/src/weights/xcm/{output_file}",
+    ].join(" "),
+  },
+  custom: {
+    title: "XCM Custom",
+    benchCommand:
+      "cargo run --quiet --release --features runtime-benchmarks -- benchmark",
+  },
+}
+
 function checkRuntimeBenchmarkCommand(command) {
   let required = [
     "benchmark",
@@ -348,12 +435,16 @@ function benchmarkRuntime(app, config) {
       let command = config.extra.split(" ")[0]
 
       var benchConfig
-      if (config.repo == "substrate") {
+      if (config.repo == "substrate" && config.id == "runtime") {
         benchConfig = SubstrateRuntimeBenchmarkConfigs[command]
-      } else if (config.repo == "polkadot") {
+      } else if (config.repo == "polkadot" && config.id == "runtime") {
         benchConfig = PolkadotRuntimeBenchmarkConfigs[command]
+      } else if (config.repo == "polkadot" && config.id == "xcm") {
+        benchConfig = PolkadotXcmBenchmarkConfigs[command]
       } else {
-        return errorResult(`${config.repo} repo is not supported.`)
+        return errorResult(
+          `${config.repo} repo with ${config.id} is not supported.`,
+        )
       }
 
       var extra = config.extra.split(" ").slice(1).join(" ").trim()
@@ -389,7 +480,7 @@ function benchmarkRuntime(app, config) {
       var benchContext = new BenchContext(app, config)
       var { title } = benchConfig
       app.log(
-        `Started runtime benchmark "${title}." (command: ${benchCommand})`,
+        `Started ${config.id} benchmark "${title}." (command: ${benchCommand})`,
       )
 
       var error = await prepareBranch(config, { benchContext })

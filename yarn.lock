@@ -3956,7 +3956,7 @@ prepend-http@^2.0.0:
   resolved "https://registry.yarnpkg.com/prepend-http/-/prepend-http-2.0.0.tgz#e92434bfa5ea8c19f41cdfd401d741a3c819d897"
   integrity sha1-6SQ0v6XqjBn0HN/UAddBo8gZ2Jc=
 
-prettier-plugin-compactify@^0.1.5:
+prettier-plugin-compactify@^0.1.4:
   version "0.1.4"
   resolved "https://registry.yarnpkg.com/prettier-plugin-compactify/-/prettier-plugin-compactify-0.1.5.tgz#f66e1700b39e2c0c596c4a13679a8136b11e087e"
   integrity sha512-M5VN8iK4C/6OtNYYfzKKtOp3jaOu8QKI/XRcH2It+fg7meXOTXzzs47l8qiiBtJquXRHkLnY6vxH+Ep40jAdyQ==
