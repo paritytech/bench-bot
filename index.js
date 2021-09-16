@@ -107,13 +107,13 @@ module.exports = (app) => {
       const branch = pr.data.head.ref
       runner.log.debug(`branch: ${branch}`)
 
-      var { stdout: toolchain, error } = await runner.run(
+      var { stdout, error, stderr } = await runner.run(
         "rustup show active-toolchain --verbose",
       )
       if (error) {
         const msg = "ERROR: Failed to query the currently active Rust toolchain"
         if (process.env.DEBUG) {
-          runner.logFatalError(error, msg)
+          runner.logFatalError(stderr || stdout, msg)
         } else {
           await context.octokit.issues.createComment(
             context.issue({ body: msg }),
