@@ -1,7 +1,7 @@
 const { createAppAuth } = require("@octokit/auth-app")
 const assert = require("assert")
 const fs = require("fs")
-const shell = require("shelljs")
+const { Runner } = require("./runner")
 
 var { benchBranch, benchmarkRuntime } = require("./bench")
 
@@ -31,14 +31,16 @@ for (const event of ["uncaughtException", "unhandledRejection"]) {
 }
 
 module.exports = (app) => {
+  const runner = new Runner(app)
+
+  appFatalLogger = runner.log.fatal
+
   if (process.env.DEBUG) {
-    app.log("Running in debug mode")
+    runner.log("Running in debug mode")
   }
 
-  appFatalLogger = app.log.fatal
-
   const baseBranch = process.env.BASE_BRANCH || "master"
-  app.log.debug(`base branch: ${baseBranch}`)
+  runner.log.debug(`base branch: ${baseBranch}`)
 
   const appId = parseInt(process.env.APP_ID)
   assert(appId)
@@ -102,13 +104,12 @@ module.exports = (app) => {
       let pr = await context.octokit.pulls.get({ owner, repo, pull_number })
       const contributor = pr.data.head.user.login
       const branch = pr.data.head.ref
-      app.log.debug(`branch: ${branch}`)
+      runner.log.debug(`branch: ${branch}`)
 
-      var { stdout: toolchain, code: toolchainError } = shell.exec(
+      var { stdout: toolchain, error } = await runner.run(
         "rustup show active-toolchain --verbose",
-        { silent: false },
       )
-      if (toolchainError) {
+      if (error) {
         await context.octokit.issues.createComment(
           context.issue({
             body: "ERROR: Failed to query the currently active Rust toolchain",
@@ -122,7 +123,7 @@ module.exports = (app) => {
       const initialInfo = `Starting benchmark for branch: ${branch} (vs ${baseBranch})\n\nToolchain: \n${toolchain}\n\n Comment will be updated.`
       let comment_id = undefined
       if (process.env.DEBUG) {
-        app.log(initialInfo)
+        runner.log(initialInfo)
       } else {
         const issueComment = context.issue({ body: initialInfo })
         const issue_comment = await context.octokit.issues.createComment(
@@ -144,9 +145,9 @@ module.exports = (app) => {
 
       let report
       if (action == "runtime" || action == "xcm") {
-        report = await benchmarkRuntime(app, config)
+        report = await benchmarkRuntime(runner, config)
       } else {
-        report = await benchBranch(app, config)
+        report = await benchBranch(runner, config)
       }
       if (process.env.DEBUG) {
         console.log(report)
@@ -154,10 +155,10 @@ module.exports = (app) => {
       }
 
       if (report.isError) {
-        app.log.error(report.message)
+        runner.log.error(report.message)
 
         if (report.error) {
-          app.log.error(report.error)
+          runner.log.error(report.error)
         }
 
         const output = `${report.message}${
@@ -218,7 +219,7 @@ ${extraInfo}
         body,
       })
     } catch (error) {
-      app.log.fatal({
+      runner.log.fatal({
         error,
         repo,
         owner,
