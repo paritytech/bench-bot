@@ -235,6 +235,7 @@ ${extraInfo}
   })
 
   if (fs.existsSync(path.join(__dirname, "payload.json"))) {
+    console.log("receive!")
     app.receive(
       JSON.parse(
         fs.readFileSync(path.join(__dirname, "payload.json")).toString(),
