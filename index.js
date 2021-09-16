@@ -144,7 +144,6 @@ module.exports = (app) => {
         getPushDomain,
       }
 
-      console.log({ config })
       let report
       if (action == "runtime" || action == "xcm") {
         report = await benchmarkRuntime(runner, config)

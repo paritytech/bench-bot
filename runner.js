@@ -16,7 +16,7 @@ class Runner {
     this.log = app.log
   }
 
-  async run() {
+  async run(cmd, title) {
     let stdout = "",
       stderr = "",
       error = true
