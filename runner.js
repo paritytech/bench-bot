@@ -7,7 +7,7 @@ const writeFileAsync = promisify(fs.writeFile)
 const readFileAsync = promisify(fs.readFile)
 const unlinkAsync = promisify(fs.unlink)
 const execFileAsync = promisify(cp.execFile)
-const existsSync = promisify(fs.existsSync)
+const existsAsync = promisify(fs.exists)
 
 const runnerOutput = path.join(__dirname, "runner_stdout.txt")
 
@@ -50,7 +50,7 @@ class Runner {
     } catch (err) {
       error = true
       try {
-        if (await existsSync(runnerOutput)) {
+        if (await existsAsync(runnerOutput)) {
           stderr = (await readFileAsync(runnerOutput)).toString()
         }
       } catch (stderrReadError) {
