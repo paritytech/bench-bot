@@ -12,7 +12,6 @@ const runnerOutput = path.join(__dirname, "runner_stdout.txt")
 
 class Runner {
   constructor(app) {
-    this.app = app
     this.log = app.log
   }
 
@@ -23,7 +22,7 @@ class Runner {
 
     try {
       if (title) {
-        app.log({ title, msg: `Running task on directory ${process.cwd()}` })
+        this.log({ title, msg: `Running task on directory ${process.cwd()}` })
       }
 
       await writeFileAsync(runnerOutput, "")
@@ -51,13 +50,13 @@ class Runner {
       try {
         stderr = await readFileAsync(runnerOutput)
       } catch (stderrReadError) {
-        app.log.fatal({
+        this.log.fatal({
           msg: "Failed to read stderr from command",
           error: stderrReadError,
         })
       }
       error = true
-      app.log.fatal({
+      this.log.fatal({
         msg: "Caught exception in command execution",
         error: err,
       })
