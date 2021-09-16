@@ -446,12 +446,16 @@ function benchmarkRuntime(runner, config) {
       if (error) return error
 
       const outputFile = benchCommand.match(/--output(?:=|\s+)(".+?"|\S+)/)[1]
-      var { stdout, stderr } = await runner.run(
+      var { stdout, stderr, error } = await runner.run(
         benchCommand,
         `Running for branch ${config.branch}, ${
           outputFile ? `outputFile: ${outputFile}` : ""
         }: ${benchCommand}`,
       )
+      if (error) {
+        return errorResult(stderr)
+      }
+
       let extraInfo = ""
 
       var { stdout: gitStatus, stderr: gitStatusError } = await runner.run(
@@ -503,7 +507,7 @@ function benchmarkRuntime(runner, config) {
 
       return {
         title,
-        output: stdout ? stdout : stderr,
+        output: stdout || stderr,
         extraInfo,
         benchCommand,
       }
