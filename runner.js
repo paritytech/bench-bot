@@ -66,6 +66,7 @@ class Runner {
   }
 
   logFatalError(error, context = {}) {
+    console.error("logFatalError", error)
     this.log.fatal({
       error: error instanceof Error ? error.stack : error,
       ...(typeof context === "string"
