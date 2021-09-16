@@ -65,7 +65,12 @@ module.exports = (app) => {
 
   app.on("issue_comment", async (context) => {
     let commentText = context.payload.comment.body
-    console.log({ context })
+    console.log({
+      context,
+      v1: !context.payload.issue.hasOwnProperty("pull_request"),
+      v2: context.payload.action !== "created",
+      v3: !commentText.startsWith("/bench"),
+    })
     if (
       !context.payload.issue.hasOwnProperty("pull_request") ||
       context.payload.action !== "created" ||
