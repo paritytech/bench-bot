@@ -143,7 +143,7 @@ module.exports = (app) => {
       }
 
       let report
-      if (action == "runtime") {
+      if (action == "runtime" || action == "xcm") {
         report = await benchmarkRuntime(app, config)
       } else {
         report = await benchBranch(app, config)
@@ -177,7 +177,7 @@ module.exports = (app) => {
       let { title, output, extraInfo, benchCommand } = report
 
       const bodyPrefix = `
-Benchmark **${title}** for branch "${branch}" with command ${benchCommand} 
+Benchmark **${title}** for branch "${branch}" with command ${benchCommand}
 
 <details>
 <summary>Results</summary>
