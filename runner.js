@@ -19,7 +19,7 @@ class Runner {
   async run(cmd, title) {
     let stdout = "",
       stderr = "",
-      error = true
+      error = false
 
     try {
       if (title) {
@@ -48,6 +48,7 @@ class Runner {
       stdout = (await readFileAsync(runnerOutput)).toString()
       await unlinkAsync(runnerOutput)
     } catch (err) {
+      error = true
       try {
         if (await existsSync(runnerOutput)) {
           stderr = (await readFileAsync(runnerOutput)).toString()
@@ -58,7 +59,6 @@ class Runner {
           "Failed to read stderr from command",
         )
       }
-      error = true
       this.logFatalError(err, "Caught exception in command execution")
     }
 
