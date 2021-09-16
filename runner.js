@@ -45,12 +45,12 @@ class Runner {
         { stdio: "ignore" },
       )
 
-      stdout = await readFileAsync(runnerOutput)
+      stdout = (await readFileAsync(runnerOutput)).toString()
       await unlinkAsync(runnerOutput)
     } catch (err) {
       try {
         if (await existsSync(runnerOutput)) {
-          stderr = await readFileAsync(runnerOutput)
+          stderr = (await readFileAsync(runnerOutput)).toString()
         }
       } catch (stderrReadError) {
         this.logFatalError(
