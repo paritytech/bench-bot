@@ -108,7 +108,6 @@ function benchBranch(runner, config) {
       }
 
       const collector = new libCollector.Collector()
-      var runner = new Runner(app)
       var { title, benchCommand } = benchConfig
       runner.log(`Started benchmark "${title}."`)
 
@@ -436,7 +435,6 @@ function benchmarkRuntime(runner, config) {
         return errorResult(`Missing required flags: ${missing.toString()}`)
       }
 
-      var runner = new Runner(app)
       var { title } = benchConfig
       runner.log(
         `Started ${config.id} benchmark "${title}." (command: ${benchCommand})`,

@@ -102,8 +102,6 @@ module.exports = (app) => {
       // Capture all `<extra>` text in `/bench <action> <extra>`
       let extra = commentText.split(" ").splice(2).join(" ").trim()
 
-      console.log({ action, extra })
-
       let pr = await context.octokit.pulls.get({ owner, repo, pull_number })
       const contributor = pr.data.head.user.login
       const branch = pr.data.head.ref
@@ -145,7 +143,6 @@ module.exports = (app) => {
         extra,
         getPushDomain,
       }
-      console.log({ config })
 
       let report
       if (action == "runtime" || action == "xcm") {
