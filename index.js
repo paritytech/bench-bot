@@ -1,6 +1,7 @@
 const { createAppAuth } = require("@octokit/auth-app")
 const assert = require("assert")
 const fs = require("fs")
+const path = require("path")
 const { Runner } = require("./runner")
 
 var { benchBranch, benchmarkRuntime } = require("./bench")
@@ -32,6 +33,14 @@ for (const event of ["uncaughtException", "unhandledRejection"]) {
 
 module.exports = (app) => {
   const runner = new Runner(app)
+
+  if (fs.existsSync(path.join(__dirname, "payload.json"))) {
+    app.receive(
+      JSON.parse(
+        fs.readFileSync(path.join(__dirname, "payload.json")).toString(),
+      ),
+    )
+  }
 
   appFatalLogger = runner.log.fatal
 
