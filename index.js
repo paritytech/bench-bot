@@ -65,6 +65,7 @@ module.exports = (app) => {
 
   app.on("issue_comment", async (context) => {
     let commentText = context.payload.comment.body
+    console.log({ context })
     if (
       !context.payload.issue.hasOwnProperty("pull_request") ||
       context.payload.action !== "created" ||
@@ -235,7 +236,6 @@ ${extraInfo}
   })
 
   if (fs.existsSync(path.join(__dirname, "payload.json"))) {
-    console.log("receive!")
     app.receive(
       JSON.parse(
         fs.readFileSync(path.join(__dirname, "payload.json")).toString(),
