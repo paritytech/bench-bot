@@ -4,3 +4,4 @@ node_modules
 git
 log.txt
 runner_output.txt
+payload.json
