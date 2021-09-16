@@ -7,6 +7,7 @@ const writeFileAsync = promisify(fs.writeFile)
 const readFileAsync = promisify(fs.readFile)
 const unlinkAsync = promisify(fs.unlink)
 const execFileAsync = promisify(cp.execFile)
+const existsSync = promisify(fs.existsSync)
 
 const runnerOutput = path.join(__dirname, "runner_stdout.txt")
 
@@ -48,21 +49,29 @@ class Runner {
       await unlinkAsync(runnerOutput)
     } catch (err) {
       try {
-        stderr = await readFileAsync(runnerOutput)
+        if (await existsSync(runnerOutput)) {
+          stderr = await readFileAsync(runnerOutput)
+        }
       } catch (stderrReadError) {
-        this.log.fatal({
-          msg: "Failed to read stderr from command",
-          error: stderrReadError,
-        })
+        this.logFatalError(
+          stderrReadError,
+          "Failed to read stderr from command",
+        )
       }
       error = true
-      this.log.fatal({
-        msg: "Caught exception in command execution",
-        error: err,
-      })
+      this.logFatalError(err, "Caught exception in command execution")
     }
 
     return { stdout, stderr, error }
+  }
+
+  logFatalError(error, context = {}) {
+    this.log.fatal({
+      error: error instanceof Error ? error.stack : error,
+      ...(typeof context === "string"
+        ? { msg: context }
+        : { msg: "logFatalError", ...context }),
+    })
   }
 }
 

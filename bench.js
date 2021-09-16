@@ -476,11 +476,10 @@ function benchmarkRuntime(runner, config) {
             )
             if (last.error) {
               extraInfo = `ERROR: Unable to commit file ${outputFile}`
-              runner.log.fatal({
-                msg: extraInfo,
-                stdout: last.stdout,
-                stderr: last.stderr,
-              })
+              runner.logFatalError(
+                { stdout: last.stdout, stderr: last.stderr },
+                extraInfo,
+              )
             } else {
               const target = `${config.contributor}/${config.repo}`
               const { url, token } = await config.getPushDomain()
@@ -490,27 +489,21 @@ function benchmarkRuntime(runner, config) {
               )
               if (last.error) {
                 extraInfo = `ERROR: Unable to push ${outputFile}`
-                runner.log.fatal({
-                  msg: extraInfo,
-                  stdout: last.stdout,
-                  stderr: last.stderr,
-                })
+                runner.logFatalError(
+                  { stdout: last.stdout, stderr: last.stderr },
+                  extraInfo,
+                )
               }
             }
           } catch (error) {
             extraInfo =
               "NOTE: Caught exception while trying to push commits to the repository"
-            runner.log.fatal({ msg: extraInfo, error })
+            runner.logFatalError(error, extraInfo)
           }
         }
       }
 
-      return {
-        title,
-        output: stdout || stderr,
-        extraInfo,
-        benchCommand,
-      }
+      return { title, output: stdout || stderr, extraInfo, benchCommand }
     } catch (error) {
       return errorResult("Caught exception in benchmarkRuntime", error)
     }

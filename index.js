@@ -219,14 +219,11 @@ ${extraInfo}
         body,
       })
     } catch (error) {
-      runner.log.fatal({
+      runner.logFatalError(error, {
         msg: "Caught exception in issue_comment's handler",
-        error,
         payload: context.payload,
       })
-      if (process.env.DEBUG) {
-        console.error(error)
-      } else {
+      if (!process.env.DEBUG) {
         await context.octokit.issues.createComment(
           context.issue({
             body: `Exception caught: \`${error.message}\`\n${error.stack}`,
