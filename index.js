@@ -34,14 +34,6 @@ for (const event of ["uncaughtException", "unhandledRejection"]) {
 module.exports = (app) => {
   const runner = new Runner(app)
 
-  if (fs.existsSync(path.join(__dirname, "payload.json"))) {
-    app.receive(
-      JSON.parse(
-        fs.readFileSync(path.join(__dirname, "payload.json")).toString(),
-      ),
-    )
-  }
-
   appFatalLogger = runner.log.fatal
 
   if (process.env.DEBUG) {
@@ -241,4 +233,12 @@ ${extraInfo}
       }
     }
   })
+
+  if (fs.existsSync(path.join(__dirname, "payload.json"))) {
+    app.receive(
+      JSON.parse(
+        fs.readFileSync(path.join(__dirname, "payload.json")).toString(),
+      ),
+    )
+  }
 }
