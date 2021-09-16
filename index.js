@@ -220,17 +220,17 @@ ${extraInfo}
       })
     } catch (error) {
       runner.log.fatal({
-        error,
-        repo,
-        owner,
-        pull_number,
         msg: "Caught exception in issue_comment's handler",
+        error,
+        payload: context.payload
       })
-      await context.octokit.issues.createComment(
-        context.issue({
-          body: `Exception caught: \`${error.message}\`\n${error.stack}`,
-        }),
-      )
+      if (!process.env.DEBUG) {
+        await context.octokit.issues.createComment(
+          context.issue({
+            body: `Exception caught: \`${error.message}\`\n${error.stack}`,
+          }),
+        )
+      }
     }
   })
 }
