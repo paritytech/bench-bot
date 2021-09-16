@@ -113,7 +113,7 @@ module.exports = (app) => {
       if (error) {
         const msg = "ERROR: Failed to query the currently active Rust toolchain"
         if (process.env.DEBUG) {
-          app.logFatalError(error, msg)
+          runner.logFatalError(error, msg)
         } else {
           await context.octokit.issues.createComment(
             context.issue({ body: msg }),
