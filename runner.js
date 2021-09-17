@@ -19,16 +19,12 @@ class Runner {
   }
 
   async run(cmd, title) {
-    let stdout = "",
-      stderr = "",
-      error = false
+    const result = { stdout: "", stderr: "", error: false }
 
     try {
       if (title) {
         this.log({ title, msg: `Running task on directory ${process.cwd()}` })
       }
-
-      await writeFileAsync(runnerOutput, "")
 
       // The command is ran asynchronously so that the bot can still handle
       // requests while it's busy running some benchmark. Previously we favored
@@ -43,26 +39,22 @@ class Runner {
       // it's done and read the results afterwards, which is less likely to add
       // any sort of friction that could introduce variation in the measurements
       // compared to if one would run them manually.
-      const result = shell.exec(cmd, { silent: false })
-      stderr = result.stderr
-      error = result.code !== 0
-      stdout = result.stdout
+      await new Promise(function (resolve) {
+        const child = cp.fork(path.join(__dirname, "worker.js"), [cmd], {
+          detached: true,
+        })
+        child.unref()
+        child.on("message", function (childResult) {
+          Object.assign(result, childResult)
+        })
+        child.on("close", resolve)
+      })
     } catch (err) {
-      error = true
-      try {
-        if (await existsAsync(runnerOutput)) {
-          stderr = (await readFileAsync(runnerOutput)).toString()
-        }
-      } catch (stderrReadError) {
-        this.logFatalError(
-          stderrReadError,
-          "Failed to read stderr from command",
-        )
-      }
+      result.error = true
       this.logFatalError(err, "Caught exception in command execution")
     }
 
-    return { stdout, stderr, error }
+    return result
   }
 
   logFatalError(error, context = {}) {
