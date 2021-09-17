@@ -10,15 +10,10 @@ const execFileAsync = promisify(cp.execFile)
 const existsAsync = promisify(fs.exists)
 
 const runnerOutput = path.join(__dirname, "runner_output.txt")
-const applicationLog = path.join(__dirname, "log.txt")
-const commandFifo = path.join(__dirname, "command_fifo")
 
 class Runner {
   constructor(app) {
     this.log = app.log
-    if (!fs.existsSync(commandFifo)) {
-      cp.execFileSync("mkfifo", [commandFifo], { stdio: "ignore" })
-    }
   }
 
   async run(cmd, title) {
@@ -46,17 +41,12 @@ class Runner {
       // it's done and read the results afterwards, which is less likely to add
       // any sort of friction that could introduce variation in the measurements
       // compared to if one would run them manually.
-      const cmdProc = cp.spawn(
+      await cp.execFileSync(
         "bash",
-        [
-          "-c",
-          `trap "echo > ${commandFifo}" EXIT; (${cmd}) 2>&1 | tee -a ${applicationLog} ${runnerOutput}`,
-        ],
+        ["-c", `(${cmd}) 2>&1 | tee ${runnerOutput}`],
         { stdio: "ignore" },
       )
-      cmdProc.unref()
 
-      await execFileAsync("cat", [commandFifo])
       stdout = (await readFileAsync(runnerOutput)).toString()
     } catch (err) {
       error = true

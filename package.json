@@ -20,6 +20,7 @@
     "@octokit/auth-app": "^3.5.3",
     "async-mutex": "^0.3.1",
     "probot": "^12.1.0",
+    "shelljs": "^0.8.4",
     "smee-client": "^1.2.2"
   },
   "devDependencies": {
