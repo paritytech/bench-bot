@@ -1,6 +1,6 @@
 const shell = require("shelljs")
 
-const [command] = process.argv.slice(2)
+const [cmd] = process.argv.slice(2)
 
 let result = { stdout: "", stderr: "", error: false }
 
