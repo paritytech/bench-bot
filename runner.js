@@ -16,7 +16,7 @@ const commandFifo = path.join(__dirname, "command_fifo")
 class Runner {
   constructor(app) {
     this.log = app.log
-    if (fs.existsSync(commandFifo)) {
+    if (!fs.existsSync(commandFifo)) {
       cp.execFileSync("mkfifo", [commandFifo], { stdio: "ignore" })
     }
   }
