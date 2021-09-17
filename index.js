@@ -120,7 +120,6 @@ module.exports = (app) => {
         }
         return
       } else {
-        console.log({ result })
         toolchain = toolchain.trim()
       }
 

@@ -3,6 +3,3 @@ node_modules
 .env
 git
 log.txt
-runner_output.txt
-payload.json
-command_fifo
