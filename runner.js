@@ -43,18 +43,10 @@ class Runner {
       // it's done and read the results afterwards, which is less likely to add
       // any sort of friction that could introduce variation in the measurements
       // compared to if one would run them manually.
-      await new Promise(function (resolve) {
-        shell.exec(
-          cmd,
-          { silent: false, async: true },
-          function (code, fullStdout, fullStderr) {
-            error = code !== 0
-            stderr = fullStderr
-            stdout = fullStdout
-            resolve()
-          },
-        )
-      })
+      const result = shell.exec(cmd, { silent: false })
+      stderr = result.stderr
+      error = result.code !== 0
+      stdout = result.stdout
     } catch (err) {
       error = true
       try {

@@ -254,6 +254,7 @@ handle_exec() {
           cd \"$install_location\" &&
           git config --local user.name 'Parity Bot' &&
           git config --local user.email admin@parity.io &&
+          git config --local advice.detachedHead false &&
           yarn &&
           ${env_vars:-} yarn start 2>&1 | tee -a \"$exec_log_file\"
         "
