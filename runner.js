@@ -51,6 +51,7 @@ class Runner {
             error = code !== 0
             stderr = fullStderr
             stdout = fullStdout
+            resolve()
           },
         )
       })
