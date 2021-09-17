@@ -46,7 +46,6 @@ class Runner {
       )
 
       stdout = (await readFileAsync(runnerOutput)).toString()
-      await unlinkAsync(runnerOutput)
     } catch (err) {
       error = true
       try {
