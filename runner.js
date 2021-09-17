@@ -11,6 +11,8 @@ const existsAsync = promisify(fs.exists)
 
 const runnerOutput = path.join(__dirname, "runner_output.txt")
 
+const shell = require("shelljs")
+
 class Runner {
   constructor(app) {
     this.log = app.log
@@ -41,13 +43,17 @@ class Runner {
       // it's done and read the results afterwards, which is less likely to add
       // any sort of friction that could introduce variation in the measurements
       // compared to if one would run them manually.
-      await cp.execFileSync(
-        "bash",
-        ["-c", `(${cmd}) 2>&1 | tee ${runnerOutput}`],
-        { stdio: "ignore" },
-      )
-
-      stdout = (await readFileAsync(runnerOutput)).toString()
+      await new Promise(function (resolve) {
+        shell.exec(
+          cmd,
+          { silent: false, async: true },
+          function (code, fullStdout, fullStderr) {
+            error = code !== 0
+            stderr = fullStderr
+            stdout = fullStdout
+          },
+        )
+      })
     } catch (err) {
       error = true
       try {
