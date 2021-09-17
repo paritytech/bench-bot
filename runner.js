@@ -45,7 +45,7 @@ class Runner {
         { stdio: "ignore" },
       )
 
-      //stdout = (await readFileAsync(runnerOutput)).toString()
+      stdout = (await readFileAsync(runnerOutput)).toString()
     } catch (err) {
       error = true
       try {
