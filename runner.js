@@ -11,8 +11,6 @@ const existsAsync = promisify(fs.exists)
 
 const runnerOutput = path.join(__dirname, "runner_output.txt")
 
-const shell = require("shelljs")
-
 class Runner {
   constructor(app) {
     this.log = app.log
@@ -26,19 +24,16 @@ class Runner {
         this.log({ title, msg: `Running task on directory ${process.cwd()}` })
       }
 
-      // The command is ran asynchronously so that the bot can still handle
-      // requests while it's busy running some benchmark. Previously we favored
-      // running the command synchronously so that there was less risk of having
-      // the Node.js process interfere or deprioritize the process' execution,
-      // but that was that was later judged to be unnecessary caution based on
-      // the measurements.
-      // We've tried to cp.spawn for capturing the processes' streams but,
-      // again, such strategy might add execution overhead because then you'd
-      // have two processes competing for resources: the benchmark and the app.
-      // Running the proces in a shell is useful so that we simply wait until
-      // it's done and read the results afterwards, which is less likely to add
-      // any sort of friction that could introduce variation in the measurements
-      // compared to if one would run them manually.
+      // It was observed that running the command asynchronously, e.g. wrapped
+      // in a promise, _directly_ from this program, incurs overhead in the
+      // measurements.
+      // We do not want to run the command synchronously, either, because even
+      // though it does not incur overhead, the bot would stay unresponsive
+      // until the command finishes, since it would block the main thread.
+      // Our solution is to spawn another program from a worker module which is
+      // completely detached from this process and communicates via IPC. Since
+      // execution occurs in a different program entirely, it's very unlikely to
+      // suffer from overhead, no matter what this application is doing.
       await new Promise(function (resolve) {
         const child = cp.fork(path.join(__dirname, "worker.js"), [cmd], {
           detached: true,
