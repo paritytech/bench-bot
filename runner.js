@@ -45,7 +45,6 @@ class Runner {
         })
         child.unref()
         child.on("message", function (childResult) {
-          console.log({ from: "received", childResult })
           result = childResult
         })
         child.on("close", resolve)
