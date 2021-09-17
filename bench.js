@@ -53,8 +53,14 @@ const prepareBranch = async function (
 
   var { url } = await getPushDomain()
   await runner.run(
-    `mkdir -p ${gitDirectory}; git clone ${url}/${owner}/${repo} ${repositoryPath}; cd ${repositoryPath}`,
+    `mkdir -p ${gitDirectory}; git clone ${url}/${owner}/${repo} ${repositoryPath}`,
   )
+
+  try {
+    process.chdir(repositoryPath)
+  } catch (error) {
+    return errorResult(`Failed to enter directory ${repositoryPath}`, error)
+  }
 
   var { error, stderr } = await runner.run("git add . && git reset --hard HEAD")
   if (error) return errorResult(stderr)
