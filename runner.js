@@ -10,10 +10,15 @@ const execFileAsync = promisify(cp.execFile)
 const existsAsync = promisify(fs.exists)
 
 const runnerOutput = path.join(__dirname, "runner_output.txt")
+const applicationLog = path.join(__dirname, "log.txt")
+const commandFifo = path.join(__dirname, "command_fifo")
 
 class Runner {
   constructor(app) {
     this.log = app.log
+    if (fs.existsSync(commandFifo)) {
+      cp.execFileSync("mkfifo", [commandFifo], { stdio: "ignore" })
+    }
   }
 
   async run(cmd, title) {
@@ -28,23 +33,30 @@ class Runner {
 
       await writeFileAsync(runnerOutput, "")
 
-      // We the command is ran asynchronously so that the bot can still handle
-      // requests while it's executing. Previously we favored running the
-      // command synchronously so that there was less risk of having the Node.js
-      // process interfere or deprioritize the process' execution, but that it
-      // was observed that was unnecessary caution.
-      // Previously we've used cp.spawn for capturing the processes' streams
-      // but, again, having it execute directly in the shell reduces the
-      // likelihood of friction or overhead due to Node.js APIs.
-      // Since we should be redirecting the program's output streams to the
-      // systemd journal in the deployment, it's also relevant that we do not
-      // capture the process' streams here.
-      await execFileAsync(
+      // The command is ran asynchronously so that the bot can still handle
+      // requests while it's busy running some benchmark. Previously we favored
+      // running the command synchronously so that there was less risk of having
+      // the Node.js process interfere or deprioritize the process' execution,
+      // but that was that was later judged to be unnecessary caution based on
+      // the measurements.
+      // We've tried to cp.spawn for capturing the processes' streams but,
+      // again, such strategy might add execution overhead because then you'd
+      // have two processes competing for resources: the benchmark and the app.
+      // Running the proces in a shell is useful so that we simply wait until
+      // it's done and read the results afterwards, which is less likely to add
+      // any sort of friction that could introduce variation in the measurements
+      // compared to if one would run them manually.
+      const cmdProc = cp.spawn(
         "bash",
-        ["-c", `(${cmd}) 2>&1 | tee ${runnerOutput}`],
+        [
+          "-c",
+          `trap "echo > ${commandFifo}" EXIT; (${cmd}) 2>&1 | tee -a ${applicationLog} ${runnerOutput}`,
+        ],
         { stdio: "ignore" },
       )
+      cmdProc.unref()
 
+      await execFileAsync("cat", [commandFifo])
       stdout = (await readFileAsync(runnerOutput)).toString()
     } catch (err) {
       error = true
