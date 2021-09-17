@@ -19,7 +19,7 @@ class Runner {
   }
 
   async run(cmd, title) {
-    let result = { stdout: "", stderr: "", error: false }
+    let result = { stdout: "", stderr: "", error: true }
 
     try {
       if (title) {
@@ -45,6 +45,7 @@ class Runner {
         })
         child.unref()
         child.on("message", function (childResult) {
+          console.log({ from: "received", childResult })
           result = childResult
         })
         child.on("close", resolve)

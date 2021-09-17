@@ -13,4 +13,5 @@ try {
   result.stdout = error.stdout || ""
 }
 
+console.log({ from: "sent", result })
 process.send(result)
