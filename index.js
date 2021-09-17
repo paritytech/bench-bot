@@ -107,11 +107,12 @@ module.exports = (app) => {
       const branch = pr.data.head.ref
       runner.log.debug(`branch: ${branch}`)
 
+      var result = await runner.run("rustup show active-toolchain --verbose")
       var {
         stdout: toolchain,
         error,
         stderr,
-      } = await runner.run("rustup show active-toolchain --verbose")
+      } = result
       if (error) {
         const msg = "ERROR: Failed to query the currently active Rust toolchain"
         if (process.env.DEBUG) {
@@ -123,6 +124,7 @@ module.exports = (app) => {
         }
         return
       } else {
+        console.log({ result })
         toolchain = toolchain.trim()
       }
 
