@@ -53,7 +53,7 @@ const prepareBranch = async function (
 
   var { url } = await getPushDomain()
   await runner.run(
-    `mkdir -p ${gitDirectory} && git clone ${url}/${owner}/${repo} ${repositoryPath} && cd ${repositoryPath}`,
+    `mkdir -p ${gitDirectory}; git clone ${url}/${owner}/${repo} ${repositoryPath}; cd ${repositoryPath}`,
   )
 
   var { error, stderr } = await runner.run("git add . && git reset --hard HEAD")
@@ -437,7 +437,7 @@ function benchmarkRuntime(runner, config) {
 
       var { title } = benchConfig
       runner.log(
-        `Started ${config.id} benchmark "${title}." (command: ${benchCommand})`,
+        `Started ${config.id} benchmark "${title}" (command: ${benchCommand})`,
       )
 
       var error = await prepareBranch(config, { runner })
