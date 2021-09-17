@@ -19,7 +19,7 @@ class Runner {
   }
 
   async run(cmd, title) {
-    const result = { stdout: "", stderr: "", error: false }
+    let result = { stdout: "", stderr: "", error: false }
 
     try {
       if (title) {
@@ -45,12 +45,14 @@ class Runner {
         })
         child.unref()
         child.on("message", function (childResult) {
-          Object.assign(result, childResult)
+          result = childResult
         })
         child.on("close", resolve)
       })
     } catch (err) {
       result.error = true
+      result.stderr = error.stderr || ""
+      result.stdout = error.stdout || ""
       this.logFatalError(err, "Caught exception in command execution")
     }
 

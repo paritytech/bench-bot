@@ -138,92 +138,92 @@ module.exports = (app) => {
         comment_id = issue_comment.data.id
       }
 
-      let config = {
-        owner,
-        contributor,
-        repo,
-        branch,
-        baseBranch,
-        id: action,
-        extra,
-        getPushDomain,
-      }
+      //let config = {
+        //owner,
+        //contributor,
+        //repo,
+        //branch,
+        //baseBranch,
+        //id: action,
+        //extra,
+        //getPushDomain,
+      //}
 
-      let report
-      if (action == "runtime" || action == "xcm") {
-        report = await benchmarkRuntime(runner, config)
-      } else {
-        report = await benchBranch(runner, config)
-      }
-      if (process.env.DEBUG) {
-        console.log(report)
-        return
-      }
+      //let report
+      //if (action == "runtime" || action == "xcm") {
+        //report = await benchmarkRuntime(runner, config)
+      //} else {
+        //report = await benchBranch(runner, config)
+      //}
+      //if (process.env.DEBUG) {
+        //console.log(report)
+        //return
+      //}
 
-      if (report.isError) {
-        runner.log.error(report.message)
+      //if (report.isError) {
+        //runner.log.error(report.message)
 
-        if (report.error) {
-          runner.log.error(report.error)
-        }
+        //if (report.error) {
+          //runner.log.error(report.error)
+        //}
 
-        const output = `${report.message}${
-          report.error ? `: ${report.error.toString()}` : ""
-        }`
+        //const output = `${report.message}${
+          //report.error ? `: ${report.error.toString()}` : ""
+        //}`
 
-        await context.octokit.issues.updateComment({
-          owner,
-          repo,
-          comment_id,
-          body: `Error running benchmark: **${branch}**\n\n<details><summary>stdout</summary>${output}</details>`,
-        })
+        //await context.octokit.issues.updateComment({
+          //owner,
+          //repo,
+          //comment_id,
+          //body: `Error running benchmark: **${branch}**\n\n<details><summary>stdout</summary>${output}</details>`,
+        //})
 
-        return
-      }
+        //return
+      //}
 
-      let { title, output, extraInfo, benchCommand } = report
+      //let { title, output, extraInfo, benchCommand } = report
 
-      const bodyPrefix = `
-Benchmark **${title}** for branch "${branch}" with command ${benchCommand}
+      //const bodyPrefix = `
+//Benchmark **${title}** for branch "${branch}" with command ${benchCommand}
 
-<details>
-<summary>Results</summary>
+//<details>
+//<summary>Results</summary>
 
-\`\`\`
-`.trim()
+//\`\`\`
+//`.trim()
 
-      const bodySuffix = `
-\`\`\`
+      //const bodySuffix = `
+//\`\`\`
 
-</details>
-`.trim()
+//</details>
+//`.trim()
 
-      const padding = 16
-      const formattingLength =
-        bodyPrefix.length + bodySuffix.length + extraInfo.length + padding
-      const length = formattingLength + output.length
-      if (length >= githubCommentLimitLength) {
-        output = `${output.slice(
-          0,
-          githubCommentLimitLength -
-            (githubCommentLimitTruncateMessage.length + formattingLength),
-        )}${githubCommentLimitTruncateMessage}`
-      }
+      //const padding = 16
+      //const formattingLength =
+        //bodyPrefix.length + bodySuffix.length + extraInfo.length + padding
+      //const length = formattingLength + output.length
+      //if (length >= githubCommentLimitLength) {
+        //output = `${output.slice(
+          //0,
+          //githubCommentLimitLength -
+            //(githubCommentLimitTruncateMessage.length + formattingLength),
+        //)}${githubCommentLimitTruncateMessage}`
+      //}
 
-      const body = `
-${bodyPrefix}
-${output}
-${bodySuffix}
+      //const body = `
+//${bodyPrefix}
+//${output}
+//${bodySuffix}
 
-${extraInfo}
-`.trim()
+//${extraInfo}
+//`.trim()
 
-      await context.octokit.issues.updateComment({
-        owner,
-        repo,
-        comment_id,
-        body,
-      })
+      //await context.octokit.issues.updateComment({
+        //owner,
+        //repo,
+        //comment_id,
+        //body,
+      //})
     } catch (error) {
       runner.logFatalError(error, {
         msg: "Caught exception in issue_comment's handler",

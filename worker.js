@@ -2,20 +2,15 @@ const shell = require("shelljs")
 
 const [command] = process.argv.slice(2)
 
-let stdout = "",
-  stderr = "",
-  error = false
+let result = { stdout: "", stderr: "", error: false }
 
 try {
-  const result = shell.exec(cmd, { silent: false })
-  stderr = result.stderr
-  error = result.code !== 0
-  stdout = result.stdout
+  result = shell.exec(cmd, { silent: false })
+  result.error = result.code !== 0
 } catch (error) {
-  error = true
-  if (!stderr) {
-    stderr = error.stderr || ""
-  }
+  result.error = true
+  result.stderr = error.stderr || ""
+  result.stdout = error.stdout || ""
 }
 
-process.send({ error, stderr, stdout })
+process.send(result)
