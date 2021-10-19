@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@octokit/auth-app": "^3.5.3",
+    "@octokit/webhooks": "^9.17.0",
     "async-mutex": "^0.3.1",
     "probot": "^12.1.0",
     "shelljs": "^0.8.4",
