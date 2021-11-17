@@ -297,6 +297,25 @@ var PolkadotRuntimeBenchmarkConfigs = {
       "--output=./runtime/westend/src/weights/{output_file}",
     ].join(" "),
   },
+	rococo: {
+		title: "Runtime Rococo Pallet",
+		benchCommand: [
+			"cargo run --quiet --release",
+			"--features=runtime-benchmarks",
+			"--",
+			"benchmark",
+			"--chain=rococo-dev",
+			"--steps=50",
+			"--repeat=20",
+			"--pallet={pallet_name}",
+			'--extrinsic="*"',
+			"--execution=wasm",
+			"--wasm-execution=compiled",
+			"--heap-pages=4096",
+			"--header=./file_header.txt",
+			"--output=./runtime/rococo/src/weights/{output_file}",
+		].join(" "),
+	},
   custom: {
     title: "Runtime Custom",
     benchCommand:
