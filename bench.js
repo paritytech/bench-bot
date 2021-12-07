@@ -519,7 +519,77 @@ async function benchmarkRuntime(app, config) {
     }
 }
 
+async function benchEVM(app, config) {
+    app.log("Waiting our turn to run benchmark...")
+
+    const release = await mutex.acquire();
+
+    try {
+        var benchContext = new BenchContext(app, config);
+        console.log("Started EVM benchmark");
+        shell.mkdir("-p", "git")
+        shell.cd(cwd + "/git")
+
+        var { error } = benchContext.runTask(`git clone https://github.com/${config.owner}/${config.repo}`, "Cloning git repository...");
+        if (error) {
+            app.log("Git clone failed, probably directory exists...");
+        }
+
+        shell.cd(cwd + `/git/${config.repo}`);
+
+        var { error, stderr } = benchContext.runTask(`git fetch`, "Doing git fetch...");
+        if (error) return errorResult(stderr);
+
+        // Checkout the custom branch
+        var { error, stderr } = benchContext.runTask(`git checkout ${config.branch}`, `Checking out ${config.branch}...`);
+        if (error) {
+            app.log("Git checkout failed, probably some dirt in directory... Will continue with git reset.");
+        }
+
+        var { error, stderr } = benchContext.runTask(`git reset --hard origin/${config.branch}`, `Resetting ${config.branch} hard...`);
+        if (error) return errorResult(stderr);
+
+        var { error, stderr } = benchContext.runTask(`git submodule update --init`);
+        if (error) return errorResult(stderr);
+
+        // Merge master branch
+        var { error, stderr } = benchContext.runTask(`git merge origin/${config.baseBranch}`, `Merging branch ${config.baseBranch}`);
+        if (error) return errorResult(stderr, "merge");
+        if (config.pushToken) {
+            benchContext.runTask(`git push https://${config.pushToken}@github.com/${config.owner}/${config.repo}.git HEAD`, `Pushing merge with pushToken.`);
+        } else {
+            benchContext.runTask(`git push`, `Pushing merge.`);
+        }
+
+        const branchCommand = `make bench-evm`;
+        var { error, stdout, stderr } = benchContext.runTask(branchCommand, `Benching branch: ${config.branch}...`);
+
+        benchContext.runTask(`git add runtime/common/src/gas_to_weight_ratio.rs`, `Adding new files.`);
+        benchContext.runTask(`git commit -m "${branchCommand}"`, `Committing changes.`);
+        if (config.pushToken) {
+            benchContext.runTask(`git push https://${config.pushToken}@github.com/${config.owner}/${config.repo}.git HEAD`, `Pushing commit with pushToken.`);
+        } else {
+            benchContext.runTask(`git push`, `Pushing commit.`);
+        }
+
+        let report = `Benchmark: **EVM**\n\n`
+            + branchCommand
+            + "\n\n<details>\n<summary>Results</summary>\n\n"
+            + (stdout ? stdout : stderr)
+            + "\n\n </details>";
+
+        return report;
+    }
+    catch (error) {
+        return errorResult(error.toString());
+    }
+    finally {
+        release();
+    }
+}
+
 module.exports = {
     benchBranch: benchBranch,
     benchmarkRuntime: benchmarkRuntime,
+    benchEVM: benchEVM,
 };

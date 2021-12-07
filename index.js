@@ -1,5 +1,5 @@
 var shell = require('shelljs');
-var { benchBranch, benchmarkRuntime } = require("./bench");
+var { benchBranch, benchmarkRuntime, benchEVM } = require("./bench");
 
 module.exports = app => {
   app.log(`base branch: ${process.env.BASE_BRANCH}`);
@@ -49,6 +49,8 @@ module.exports = app => {
     let report;
     if (action == "runtime") {
       report = await benchmarkRuntime(app, config)
+    } else if (action == "evm") {
+      report = await benchEVM(app, config);
     } else {
       report = await benchBranch(app, config)
     };
