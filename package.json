@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "nodemon",
     "start": "probot run ./index.js",
-    "test": "mocha",
+    "test": "jest",
     "test:watch": "jest --watch --notify --notifyMode=change --coverage",
     "prettier": "prettier '{*,**/*}.{js,json,yaml,html}'",
     "format": "yarn run prettier --write",
