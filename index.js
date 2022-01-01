@@ -3,7 +3,7 @@ const assert = require("assert")
 const fs = require("fs")
 const shell = require("shelljs")
 
-var { benchBranch, benchmarkRuntime } = require("./bench")
+var { benchBranch, benchmarkRuntime, benchRustup } = require("./bench")
 
 const githubCommentLimitLength = 65536
 const githubCommentLimitTruncateMessage = "<truncated>..."
@@ -145,6 +145,8 @@ module.exports = (app) => {
       let report
       if (action == "runtime" || action == "xcm") {
         report = await benchmarkRuntime(app, config)
+      } else if (action == "rustup") {
+        report = await benchRustup(app, config)
       } else {
         report = await benchBranch(app, config)
       }
@@ -160,9 +162,8 @@ module.exports = (app) => {
           app.log.error(report.error)
         }
 
-        const output = `${report.message}${
-          report.error ? `: ${report.error.toString()}` : ""
-        }`
+        const output = `${report.message}${report.error ? `: ${report.error.toString()}` : ""
+          }`
 
         await context.octokit.issues.updateComment({
           owner,
@@ -178,6 +179,8 @@ module.exports = (app) => {
 
       const bodyPrefix = `
 Benchmark **${title}** for branch "${branch}" with command ${benchCommand}
+
+Toolchain: ${toolchain}
 
 <details>
 <summary>Results</summary>
@@ -199,7 +202,7 @@ Benchmark **${title}** for branch "${branch}" with command ${benchCommand}
         output = `${output.slice(
           0,
           githubCommentLimitLength -
-            (githubCommentLimitTruncateMessage.length + formattingLength),
+          (githubCommentLimitTruncateMessage.length + formattingLength),
         )}${githubCommentLimitTruncateMessage}`
       }
 

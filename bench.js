@@ -297,25 +297,25 @@ var PolkadotRuntimeBenchmarkConfigs = {
       "--output=./runtime/westend/src/weights/{output_file}",
     ].join(" "),
   },
-	rococo: {
-		title: "Runtime Rococo Pallet",
-		benchCommand: [
-			"cargo run --quiet --release",
-			"--features=runtime-benchmarks",
-			"--",
-			"benchmark",
-			"--chain=rococo-dev",
-			"--steps=50",
-			"--repeat=20",
-			"--pallet={pallet_name}",
-			'--extrinsic="*"',
-			"--execution=wasm",
-			"--wasm-execution=compiled",
-			"--heap-pages=4096",
-			"--header=./file_header.txt",
-			"--output=./runtime/rococo/src/weights/{output_file}",
-		].join(" "),
-	},
+  rococo: {
+    title: "Runtime Rococo Pallet",
+    benchCommand: [
+      "cargo run --quiet --release",
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=rococo-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--output=./runtime/rococo/src/weights/{output_file}",
+    ].join(" "),
+  },
   custom: {
     title: "Runtime Custom",
     benchCommand:
@@ -508,8 +508,7 @@ function benchmarkRuntime(app, config) {
       const outputFile = benchCommand.match(/--output(?:=|\s+)(".+?"|\S+)/)[1]
       var { stdout, stderr } = benchContext.runTask(
         benchCommand,
-        `Running for branch ${config.branch}, ${
-          outputFile ? `outputFile: ${outputFile}` : ""
+        `Running for branch ${config.branch}, ${outputFile ? `outputFile: ${outputFile}` : ""
         }: ${benchCommand}`,
       )
       let extraInfo = ""
@@ -572,7 +571,43 @@ function benchmarkRuntime(app, config) {
   })
 }
 
+function benchRustup(app, config) {
+  app.log("Waiting our turn to run benchRustup...")
+
+  return mutex.runExclusive(async function () {
+    try {
+
+      // right now only `rustup update` is supported.
+      if (config.extra != "update") {
+        return errorResult(`Invalid "rustup" command. Only "update" is supported.`)
+      }
+
+      const collector = new libCollector.Collector()
+      var benchContext = new BenchContext(app, config)
+
+      let benchCommand = "rustup update";
+      let title = "Rustup Update";
+
+      var { stderr, error, stdout } = benchContext.runTask(
+        benchCommand,
+        `Executing "rustup update"...`,
+      )
+      if (error) return errorResult(stderr)
+
+      return {
+        title,
+        output: stdout ? stdout : stderr,
+        extraInfo: "",
+        benchCommand
+      }
+    } catch (error) {
+      return errorResult("Caught exception in benchRustup", error)
+    }
+  })
+}
+
 module.exports = {
   benchBranch: benchBranch,
   benchmarkRuntime: benchmarkRuntime,
+  benchRustup: benchRustup,
 }
