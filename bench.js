@@ -585,7 +585,7 @@ function benchRustup(app, config) {
       const collector = new libCollector.Collector()
       var benchContext = new BenchContext(app, config)
 
-      let benchCommand = "rustup udpate";
+      let benchCommand = "rustup update";
 
       var { stderr, error, stdout } = benchContext.runTask(
         benchCommand,
