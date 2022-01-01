@@ -586,6 +586,7 @@ function benchRustup(app, config) {
       var benchContext = new BenchContext(app, config)
 
       let benchCommand = "rustup update";
+      let title = "Rustup Update";
 
       var { stderr, error, stdout } = benchContext.runTask(
         benchCommand,
