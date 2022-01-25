@@ -99,6 +99,9 @@ const prepareBranch = async function (
   benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`)
   shell.cd(repositoryPath)
 
+  var { error, stderr } = benchContext.runTask("git submodule update --init")
+  if (error) return errorResult(stderr)
+
   var { error } = benchContext.runTask("git add . && git reset --hard HEAD")
   if (error) return errorResult(stderr)
 
@@ -325,6 +328,47 @@ var PolkadotRuntimeBenchmarkConfigs = {
   },
 }
 
+var MoonbeamRuntimeBenchmarkConfigs = {
+  pallet: {
+    title: "Runtime Pallet",
+    benchCommand: [
+      cargoRun,
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=polkadot-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--output=./runtime/polkadot/src/weights/{output_file}",
+    ].join(" "),
+  },
+  polkadot: {
+    title: "Runtime Polkadot Pallet",
+    benchCommand: [
+      cargoRun,
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=polkadot-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--output=./runtime/polkadot/src/weights/{output_file}",
+    ].join(" "),
+  },
+}
+
 var PolkadotXcmBenchmarkConfigs = {
   pallet: {
     title: "XCM",
@@ -453,22 +497,24 @@ function benchmarkRuntime(app, config) {
         return errorResult(`Incomplete command.`)
       }
 
-      let command = config.extra.split(" ")[0]
+      let [command, ...extra] = config.extra.split(" ")
+      extra = extra.join(" ").trim();
 
       var benchConfig
+      
       if (config.repo == "substrate" && config.id == "runtime") {
         benchConfig = SubstrateRuntimeBenchmarkConfigs[command]
       } else if (config.repo == "polkadot" && config.id == "runtime") {
         benchConfig = PolkadotRuntimeBenchmarkConfigs[command]
       } else if (config.repo == "polkadot" && config.id == "xcm") {
         benchConfig = PolkadotXcmBenchmarkConfigs[command]
+      } else if (config.repo == "moonbeam" && config.id == "runtime") {
+        benchConfig = MoonbeamRuntimeBenchmarkConfigs[command]
       } else {
         return errorResult(
           `${config.repo} repo with ${config.id} is not supported.`,
         )
       }
-
-      var extra = config.extra.split(" ").slice(1).join(" ").trim()
 
       if (!checkAllowedCharacters(extra)) {
         return errorResult(`Not allowed to use #&|; in the command!`)

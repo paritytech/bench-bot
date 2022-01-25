@@ -62,10 +62,11 @@ module.exports = (app) => {
 
   app.on("issue_comment", async (context) => {
     let commentText = context.payload.comment.body
+    const triggerCommand = "/bench"
     if (
       !context.payload.issue.hasOwnProperty("pull_request") ||
       context.payload.action !== "created" ||
-      !commentText.startsWith("/bench")
+      !commentText.startsWith(triggerCommand)
     ) {
       return
     }
@@ -95,9 +96,8 @@ module.exports = (app) => {
       const pull_number = context.payload.issue.number
 
       // Capture `<action>` in `/bench <action> <extra>`
-      let action = commentText.split(" ").splice(1, 1).join(" ").trim()
-      // Capture all `<extra>` text in `/bench <action> <extra>`
-      let extra = commentText.split(" ").splice(2).join(" ").trim()
+      let [action, ...extra] = commentText.slice(triggerCommand.length).trim().split(" ")
+      extra = extra.join(" ").trim()
 
       let pr = await context.octokit.pulls.get({ owner, repo, pull_number })
       const contributor = pr.data.head.user.login
