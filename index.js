@@ -48,6 +48,7 @@ module.exports = (app) => {
   // FIXME: This is suboptimal and we should not have to stop the application in
   // case of errors
   // The server will automatically restarted upon exit in ./run
+  let isWaitingForExitingWhenFree = false
   const exitWhenFree = async function() {
     const isFree = await mutex.runExclusive(function () {
       return pendingPayloadCount === 0
@@ -62,6 +63,11 @@ module.exports = (app) => {
     return async function(...args) {
       log(...args)
       // only exit the application after the current events have been processed
+      // we only need to register this action once since exitWhenFree calls itself
+      if (isWaitingForExitingWhenFree) {
+        return
+      }
+      isWaitingForExitingWhenFree = true
       await exitWhenFree()
     }
   }
