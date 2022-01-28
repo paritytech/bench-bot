@@ -229,21 +229,22 @@ handle_exec() {
         ;;
       esac
 
+      # don't want to spam errors in case something is broken; at least
+      # wait 1 second between attempts in the "while true" loop below
       sudo ionice -c 1 -n 0 sudo nice -n -19 sudo -u $benchbot_user \
         tmux new-session -d bash -c "
           . ~/.cargo/env &&
           cd \"$install_location\" &&
           git config --local user.name 'Parity Bot' &&
           git config --local user.email admin@parity.io &&
+          git config --local advice.detachedHead false &&
           yarn &&
           while true; do
             ${env_vars:-} yarn start 2>&1 | \
               tee -a \"$log_file\" | \
               awk '{ print \"bb: \" \$0 }' | \
-              systemd-cat -t benchbot
-            # don't want to spam errors in case something is broken; at least
-            # wait 1 second between attempts
-            sleep 1
+              systemd-cat -t benchbot;
+            sleep 1;
           done
         "
       exit_if_error "Failed to create tmux session for user $benchbot_user"
