@@ -65,7 +65,11 @@ in the bot's directory.
 
 ### Logs
 
-- Logs from the systemd journal: `journalctl --identifier benchbot`
+- Logs from the systemd journal:
+  - `journalctl --follow --identifier benchbot` follows the output as if you
+    were running the command in the foreground
+  - `journalctl --pagerend --identifier benchbot` goes to the end of the output
+    in pager mode and therefore allows you paginate through the history
   - This log is cleared between machine restarts
 
 - Full log history: `less +G /home/benchbot/bench-bot/log.txt`
