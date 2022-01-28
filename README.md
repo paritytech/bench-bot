@@ -65,9 +65,14 @@ in the bot's directory.
 
 ### Logs
 
-The logs will be output to the systemd journal: `sudo journalctl --identifier benchbot`
+- Logs for the current instance: `sudo -u benchbot tmux attach`
+  - This log is cleared between application restarts
 
-As well as to `./log.txt`.
+- Logs from the systemd journal: `sudo journalctl --identifier benchbot`
+  - This log is cleared between machine restarts
+
+- Full log history: `less +G /home/benchbot/bench-bot/log.txt`
+  - This log is only cleared manually
 
 # Required Github settings
 
