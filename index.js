@@ -214,20 +214,20 @@ module.exports = (app) => {
         let { title, output, extraInfo, benchCommand } = report
 
         const bodyPrefix = `
-  Benchmark **${title}** for branch "${branch}" with command ${benchCommand}
+Benchmark **${title}** for branch "${branch}" with command ${benchCommand}
 
-  Toolchain: ${toolchain}
+Toolchain: ${toolchain}
 
-  <details>
-  <summary>Results</summary>
+<details>
+<summary>Results</summary>
 
-  \`\`\`
+\`\`\`
   `.trim()
 
         const bodySuffix = `
-  \`\`\`
+\`\`\`
 
-  </details>
+</details>
   `.trim()
 
         const padding = 16
@@ -243,11 +243,11 @@ module.exports = (app) => {
         }
 
         const body = `
-  ${bodyPrefix}
-  ${output}
-  ${bodySuffix}
+${bodyPrefix}
+${output}
+${bodySuffix}
 
-  ${extraInfo}
+${extraInfo}
   `.trim()
 
         await context.octokit.issues.updateComment({
