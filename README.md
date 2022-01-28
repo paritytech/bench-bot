@@ -68,7 +68,7 @@ in the bot's directory.
 - Logs for the current instance: `sudo -u benchbot tmux attach`
   - This log is cleared between application restarts
 
-- Logs from the systemd journal: `sudo journalctl --identifier benchbot`
+- Logs from the systemd journal: `journalctl --identifier benchbot`
   - This log is cleared between machine restarts
 
 - Full log history: `less +G /home/benchbot/bench-bot/log.txt`
