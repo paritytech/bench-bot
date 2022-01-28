@@ -49,7 +49,6 @@ remote_repo="https://github.com/paritytech/$remote_repo_name"
 benchbot_user="benchbot"
 benchbot_session="/tmp/bench-bot"
 install_location="/home/$benchbot_user/bench-bot"
-
 log_file="$install_location/log.txt"
 
 print_help_and_exit() {
