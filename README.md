@@ -60,21 +60,12 @@ in the bot's directory.
 - `run {start,stop,restart}`: execute the relevant action for the bot.
 - `run update [ref]`: restart the bot with the branch or PR
   - For branch: `ssh user@remote '/home/benchbot/bench-bot/run update master'`
-  - For PR: `ssh user@remote '/home/benchbot/bench-bot/run update pull/number/head:branch'` 
+  - For PR: `ssh user@remote '/home/benchbot/bench-bot/run update pull/number/head:branch'`
     e.g. `pull/1/head:master`
-
-### Monitoring Service commands
-
-- `run monitor {install,uninstall}`: install or uninstall the monitoring
-  service
-- `run monitor {start,restart,stop,status,...}`: acts as a wrapper for
-  `systemctl`
 
 ### Logs
 
-The logs will be output to the systemd journal:
-
-`sudo journalctl -u benchbot-monitor.service`
+The logs will be output to the systemd journal: `sudo journalctl --identifier benchbot`
 
 As well as to `./log.txt`.
 

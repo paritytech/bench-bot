@@ -32,19 +32,13 @@ check_executables() {
   done
 }
 
-check_monitor_runtime_executables() {
-  executables=(
-    tail inotifywait wc cut
-  )
-  check_executables
-}
-
 check_app_runtime_executables() {
   if [ -e ~/.cargo/env ]; then
     . ~/.cargo/env
   fi
   executables=(
-    rustup cargo git bash
+    rustup cargo git bash systemd-cat tee yarn awk tmux ionice sudo nice
+    wc cut
   )
   check_executables
 }
@@ -56,14 +50,7 @@ benchbot_user="benchbot"
 benchbot_session="/tmp/bench-bot"
 install_location="/home/$benchbot_user/bench-bot"
 
-exec_log_dir_parent="/home/$benchbot_user"
-exec_log_dir="$install_location"
-exec_log_file_name="log.txt"
-exec_log_file="$exec_log_dir/$exec_log_file_name"
-
-monitor_service="benchbot-monitor"
-monitor_service_dir="/usr/lib/systemd/system"
-monitor_service_file="$monitor_service_dir/$monitor_service.service"
+log_file="$install_location/log.txt"
 
 print_help_and_exit() {
 echo "
@@ -75,11 +62,6 @@ Commands:
 
   start, stop, restart:
     Execute the relevant subcommand for the bot's process.
-
-  monitor:
-    Use 'monitor install' or 'monitor uninstall' for setting up the bot's
-    monitoring service.
-    Otherwise, the arguments are forwarded to systemctl.
 
   update [ref]:
     Pull a ref (branch or pull request) from $remote_repo, install it and
@@ -231,12 +213,12 @@ handle_exec() {
         exit_with_error "the $benchbot_user user is already running a process"
       fi
 
-      if [ -e "$exec_log_file" ]; then
-        local start_from_line="$(wc -l "$exec_log_file" | cut -d ' ' -f1)"
-        exit_if_error "Failed to count the lines in $exec_log_file"
+      if [ -e "$log_file" ]; then
+        local start_from_line="$(wc -l "$log_file" | cut -d ' ' -f1)"
+        exit_if_error "Failed to count the lines in $log_file"
         start_from_line=$(( start_from_line + 1 ))
       else
-        echo "" > "$exec_log_file"
+        echo "" > "$log_file"
         unset start_from_line
       fi
 
@@ -255,19 +237,25 @@ handle_exec() {
           git config --local user.name 'Parity Bot' &&
           git config --local user.email admin@parity.io &&
           yarn &&
-          ${env_vars:-} yarn start 2>&1 | tee -a \"$exec_log_file\"
+          while true; do
+            ${env_vars:-} yarn start 2>&1 | \
+              tee -a \"$log_file\" | \
+              awk '{ print \"bb: \" \$0 }' \
+              systemd-cat -t benchbot
+            # don't want to spam errors in case something is broken; at least
+            # wait 1 second between attempts
+            sleep 1
+          done
         "
       exit_if_error "Failed to create tmux session for user $benchbot_user"
 
       echo -e "\nNote: the command will still be running after quitting this terminal. Use \"run stop\" for stopping it.\n"
 
-      tail "--lines=+${start_from_line:-0}" -f "$exec_log_file"
+      tail "--lines=+${start_from_line:-0}" -f "$log_file"
     ;;
     stop)
       if pgrep -u benchbot &>/dev/null; then
         sudo pkill -u benchbot
-      else
-        return 0
       fi
     ;;
     restart)
@@ -276,156 +264,6 @@ handle_exec() {
     ;;
     *)
       exit_with_error "Unknown handle_exec command $cmd"
-    ;;
-  esac
-}
-
-stop_follow_log_file() {
-  if [ ! "${follow_log_file_tail_pid:-}" ]; then
-    return
-  fi
-
-  kill -9 "$follow_log_file_tail_pid"
-  exit_if_error "Failed to kill tail process $follow_log_file_tail_pid"
-
-  unset follow_log_file_tail_pid
-}
-
-start_follow_log_file() {
-  stop_follow_log_file
-
-  local start_from_line="$(wc -l "$exec_log_file" | cut -d ' ' -f1)"
-  exit_if_error "Failed to count the lines in $exec_log_file"
-  start_from_line=$(( start_from_line + 1 ))
-  tail "--lines=+$start_from_line" -f "$exec_log_file" | awk '{ print "bb: " $0 }' &
-  follow_log_file_tail_pid=$?
-}
-
-parse_log_file_notification_line() {
-  if [[ ! "$1" =~ ^([^[:space:]]+)[[:space:]]+(.*)  ]]; then
-    exit_with_error "Notification line did not have the expected format"
-  fi
-}
-
-follow_log_file() {
-  while true; do
-    # Monitor the log file while it exists
-    if [ -e "$exec_log_dir" ]; then
-      start_follow_log_file
-
-      while IFS= read line; do
-        parse_log_file_notification_line "$line"
-
-        local event="${BASH_REMATCH[1]}"
-        case "$event" in
-          DELETE_SELF)
-            break
-          ;;
-        esac
-
-        local file="${BASH_REMATCH[2]}"
-        if [ "$file" != "$exec_log_file_name" ]; then
-          continue
-        fi
-
-        case "$event" in
-          CREATE)
-            start_follow_log_file
-          ;;
-          DELETE)
-            stop_follow_log_file
-          ;;
-          *)
-            exit_with_error "Unhandled event $event for $exec_log_dir"
-          ;;
-        esac
-      done < <(inotifywait -e create,delete,delete_self --format '%e %f' --monitor --quiet "$exec_log_dir")
-    # If the log file does not exist, then wait for the log file's directory to
-    # be created
-    elif [ -e "$exec_log_dir_parent" ]; then
-      while IFS= read line; do
-        parse_log_file_notification_line "$line"
-
-        local event="${BASH_REMATCH[1]}"
-        case "$event" in
-          DELETE_SELF)
-            break
-          ;;
-          CREATE)
-            if [ "$exec_log_dir_parent/$file" = "$exec_log_dir" ]; then
-              break
-            fi
-          ;;
-          *)
-            exit_with_error "Unhandled event $event for $exec_log_dir_parent"
-          ;;
-        esac
-      done < <(inotifywait -e create,delete_self --format '%e %f' --monitor --quiet "$exec_log_dir_parent")
-    else
-      exit_with_error "Unable to watch '$exec_log_dir_parent' for '$exec_log_dir'"
-    fi
-  done
-}
-
-handle_monitor() {
-  local cmd="$1"
-  shift
-
-  case "$cmd" in
-    install)
-      if [ "${1:-}" != "--force" ] && [ -e "$monitor_service_file" ]; then
-        return
-      fi
-
-      &>/dev/null sudo mkdir -p "$monitor_service_dir"
-
-      echo "
-      [Unit]
-      Description=Bench Bot Monitor
-      Documentation=$remote_repo
-
-      [Service]
-      ExecStart=sh -c \"'$install_location/run' follow_log_file\"
-      Restart=always
-      RestartSec=30
-      CapabilityBoundingSet=
-      LockPersonality=true
-      NoNewPrivileges=true
-      PrivateDevices=true
-      PrivateMounts=true
-      PrivateTmp=true
-      PrivateUsers=true
-      ProtectControlGroups=true
-      ProtectHostname=true
-      ProtectKernelModules=true
-      ProtectKernelTunables=true
-      ProtectSystem=strict
-      RemoveIPC=true
-      RestrictNamespaces=true
-      RestrictSUIDSGID=true
-      SystemCallArchitectures=native
-
-      [Install]
-      WantedBy=default.target
-      " | sudo tee "$monitor_service_file" >/dev/null
-
-      exit_if_error "Failed to create service file at $monitor_service_file"
-
-      if [ -e "$exec_log_file" ] || [ -e "$exec_log_dir_parent" ]; then
-        sudo systemctl enable --now "$monitor_service"
-      else
-        log "The service \"$monitor_service\" was not activated (is the bot cloned at \"$install_location\"?). Start it later with with \"run monitor enable --now\"."
-      fi
-    ;;
-    uninstall)
-      if systemctl is-active --quiet "$monitor_service"; then
-        sudo systemctl disable --now "$monitor_service"
-        exit_if_error "Failed to disable service $monitor_service"
-      fi
-      sudo rm "$monitor_service_file"
-    ;;
-    *)
-      sudo systemctl "$cmd" "$monitor_service" "$@"
     ;;
   esac
 }
@@ -439,9 +277,6 @@ main() {
     start|stop|restart|update)
       $as_benchbot bash -c "'${BASH_SOURCE[0]}' check_app_runtime_executables"
       exit_if_error
-    ;;
-    monitor)
-      check_monitor_runtime_executables
     ;;
   esac
 
@@ -468,13 +303,6 @@ main() {
       bash -c "'${BASH_SOURCE[0]}' start $@"
       exit_if_error "Failed to start"
     ;;
-    monitor)
-      "handle_$cmd" "$@"
-      local exit_code=$?
-      echo "Exit code: $exit_code"
-      exit $exit_code
-    ;;
-    follow_log_file            | \
     install_repo               | \
     install_ref                | \
     install_deps               | \
@@ -489,8 +317,6 @@ main() {
 
       $as_benchbot bash -c "'${BASH_SOURCE[0]}' install_repo"
       exit_if_error "Failed to install repository"
-
-      handle_monitor install
     ;;
     help)
       print_help_and_exit 0
