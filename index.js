@@ -47,7 +47,7 @@ module.exports = (app) => {
   // (https://github.com/paritytech/bench-bot/issues/83#issuecomment-1024283664)
   // FIXME: This is suboptimal and we should not have to stop the application in
   // case of errors
-  // The server will automatically restarted on failures in ./run
+  // The server will automatically restarted upon exit in ./run
   const exitWhenFree = async function() {
     const isFree = await mutex.runExclusive(function () {
       return pendingPayloadCount === 0
