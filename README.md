@@ -60,23 +60,20 @@ in the bot's directory.
 - `run {start,stop,restart}`: execute the relevant action for the bot.
 - `run update [ref]`: restart the bot with the branch or PR
   - For branch: `ssh user@remote '/home/benchbot/bench-bot/run update master'`
-  - For PR: `ssh user@remote '/home/benchbot/bench-bot/run update pull/number/head:branch'` 
+  - For PR: `ssh user@remote '/home/benchbot/bench-bot/run update pull/number/head:branch'`
     e.g. `pull/1/head:master`
-
-### Monitoring Service commands
-
-- `run monitor {install,uninstall}`: install or uninstall the monitoring
-  service
-- `run monitor {start,restart,stop,status,...}`: acts as a wrapper for
-  `systemctl`
 
 ### Logs
 
-The logs will be output to the systemd journal:
+- Logs from the systemd journal:
+  - `journalctl --follow --identifier benchbot` follows the output as if you
+    were running the command in the foreground
+  - `journalctl --pagerend --identifier benchbot` goes to the end of the output
+    in pager mode and therefore allows you paginate through the history
+  - This log is cleared between machine restarts
 
-`sudo journalctl -u benchbot-monitor.service`
-
-As well as to `./log.txt`.
+- Full log history: `less +G /home/benchbot/bench-bot/log.txt`
+  - This log is only cleared manually
 
 # Required Github settings
 
