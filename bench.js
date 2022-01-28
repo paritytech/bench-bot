@@ -40,7 +40,7 @@ function BenchContext(app, config) {
       stdout = result.stdout
     } catch (err) {
       error = true
-      app.log.fatal({
+      config.logFatal({
         msg: "Caught exception in command execution",
         error: err,
       })
@@ -532,7 +532,7 @@ function benchmarkRuntime(app, config) {
             )
             if (last.error) {
               extraInfo = `ERROR: Unable to commit file ${outputFile}`
-              app.log.fatal({
+              config.logFatal({
                 msg: extraInfo,
                 stdout: last.stdout,
                 stderr: last.stderr,
@@ -546,7 +546,7 @@ function benchmarkRuntime(app, config) {
               )
               if (last.error) {
                 extraInfo = `ERROR: Unable to push ${outputFile}`
-                app.log.fatal({
+                config.logFatal({
                   msg: extraInfo,
                   stdout: last.stdout,
                   stderr: last.stderr,
@@ -556,7 +556,7 @@ function benchmarkRuntime(app, config) {
           } catch (error) {
             extraInfo =
               "NOTE: Caught exception while trying to push commits to the repository"
-            app.log.fatal({ msg: extraInfo, error })
+            config.logFatal({ msg: extraInfo, error })
           }
         }
       }

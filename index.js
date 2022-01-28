@@ -9,7 +9,7 @@ const githubCommentLimitLength = 65536
 const githubCommentLimitTruncateMessage = "<truncated>..."
 
 let isTerminating = false
-let appFatalLogger = undefined
+let logFatal = undefined
 
 for (const event of ["uncaughtException", "unhandledRejection"]) {
   process.on(event, function (error, origin) {
@@ -19,8 +19,8 @@ for (const event of ["uncaughtException", "unhandledRejection"]) {
     isTerminating = true
 
     try {
-      if (appFatalLogger) {
-        appFatalLogger({ event, error, origin })
+      if (logFatal) {
+        logFatal({ event, error, origin })
       }
     } catch (error) {
       console.error({ level: "error", event, error, origin, exception })
@@ -35,7 +35,25 @@ module.exports = (app) => {
     app.log("Running in debug mode")
   }
 
-  appFatalLogger = app.log.fatal
+  // Crash the server on Probot failures or errors
+  // We retain the original error handlers on logError and logFatal so that the
+  // application can still report errors on the expected channels
+  // This is necessary to work around problems in reconnection issues from our
+  // event source
+  // (https://github.com/paritytech/bench-bot/issues/83#issuecomment-1024283664)
+  // FIXME: This is suboptimal and we should not have to stop the application in
+  // case of errors
+  // The server will automatically restarted on failures in ./run
+  const logError = app.log.error
+  app.log.error = function(...args) {
+    logError(...args)
+    process.exit(1)
+  }
+  logFatal = app.log.fatal
+  app.log.fatal = function(...args) {
+    logFatal(...args)
+    process.exit(1)
+  }
 
   const baseBranch = process.env.BASE_BRANCH || "master"
   app.log.debug(`base branch: ${baseBranch}`)
@@ -140,6 +158,7 @@ module.exports = (app) => {
         id: action,
         extra,
         getPushDomain,
+        logFatal
       }
 
       let report
@@ -156,10 +175,10 @@ module.exports = (app) => {
       }
 
       if (report.isError) {
-        app.log.error(report.message)
+        logError(report.message)
 
         if (report.error) {
-          app.log.error(report.error)
+          logError(report.error)
         }
 
         const output = `${report.message}${report.error ? `: ${report.error.toString()}` : ""
@@ -221,7 +240,7 @@ ${extraInfo}
         body,
       })
     } catch (error) {
-      app.log.fatal({
+      logFatal({
         error,
         repo,
         owner,
