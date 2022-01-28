@@ -240,7 +240,7 @@ handle_exec() {
           while true; do
             ${env_vars:-} yarn start 2>&1 | \
               tee -a \"$log_file\" | \
-              awk '{ print \"bb: \" \$0 }' \
+              awk '{ print \"bb: \" \$0 }' | \
               systemd-cat -t benchbot
             # don't want to spam errors in case something is broken; at least
             # wait 1 second between attempts
