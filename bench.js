@@ -409,6 +409,71 @@ var PolkadotXcmBenchmarkConfigs = {
   },
 }
 
+var CumulusRuntimeBenchmarkConfigs = {
+  westmint: {
+    title: "Westmint",
+    benchCommand: [
+      cargoRun,
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=westmint-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--output=./polkadot-parachains/westmint/src/weights/{output_file}",
+    ].join(" "),
+  },
+  statemine: {
+    title: "Statemine",
+    benchCommand: [
+      cargoRun,
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=statemine-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--output=./polkadot-parachains/statemine/src/weights/{output_file}",
+    ].join(" "),
+  },
+  statemint: {
+    title: "Statemint",
+    benchCommand: [
+      cargoRun,
+      "--features=runtime-benchmarks",
+      "--",
+      "benchmark",
+      "--chain=statemint-dev",
+      "--steps=50",
+      "--repeat=20",
+      "--pallet={pallet_name}",
+      '--extrinsic="*"',
+      "--execution=wasm",
+      "--wasm-execution=compiled",
+      "--heap-pages=4096",
+      "--header=./file_header.txt",
+      "--output=./polkadot-parachains/statemint/src/weights/{output_file}",
+    ].join(" "),
+  },
+  custom: {
+    title: "Cumulus Custom",
+    benchCommand:
+      cargoRun + "--features runtime-benchmarks -- benchmark",
+  },
+}
+
 function checkRuntimeBenchmarkCommand(command) {
   let required = [
     "benchmark",
@@ -456,6 +521,8 @@ async function benchmarkRuntime(app, config) {
       benchConfig = SubstrateRuntimeBenchmarkConfigs[command]
     } else if (config.repo == "polkadot" && config.id == "runtime") {
       benchConfig = PolkadotRuntimeBenchmarkConfigs[command]
+    } else if (config.repo == "cumulus" && config.id == "runtime") {
+      benchConfig = CumulusRuntimeBenchmarkConfigs[command]   
     } else if (config.repo == "polkadot" && config.id == "xcm") {
       benchConfig = PolkadotXcmBenchmarkConfigs[command]
     } else {
