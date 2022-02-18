@@ -283,6 +283,7 @@ var PolkadotRuntimeBenchmarkConfigs = {
       cargoRun,
       "--features=runtime-benchmarks",
       "--",
+      "./target/production/polkadot-collator",
       "benchmark",
       "--chain=westend-dev",
       "--steps=50",
@@ -415,6 +416,8 @@ var CumulusRuntimeBenchmarkConfigs = {
     benchCommand: [
       cargoRun,
       "--features=runtime-benchmarks",
+      "--bin",
+      "polkadot-collator",
       "--",
       "benchmark",
       "--chain=westmint-dev",
@@ -434,6 +437,8 @@ var CumulusRuntimeBenchmarkConfigs = {
     benchCommand: [
       cargoRun,
       "--features=runtime-benchmarks",
+      "--bin",
+      "polkadot-collator",
       "--",
       "benchmark",
       "--chain=statemine-dev",
@@ -453,6 +458,8 @@ var CumulusRuntimeBenchmarkConfigs = {
     benchCommand: [
       cargoRun,
       "--features=runtime-benchmarks",
+      "--bin",
+      "polkadot-collator",
       "--",
       "benchmark",
       "--chain=statemint-dev",
