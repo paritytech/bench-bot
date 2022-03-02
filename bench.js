@@ -118,8 +118,8 @@ function benchBranch(app, config) {
 
   return mutex.runExclusive(async function () {
     try {
-      if (config.repo != "substrate") {
-        return errorResult("Node benchmarks only available on Substrate.")
+      if (config.repo != "moonbeam") {
+        return errorResult("Node benchmarks only available on Moonbeam.")
       }
 
       var id = config.id
@@ -200,109 +200,6 @@ var SubstrateRuntimeBenchmarkConfigs = {
   },
 }
 
-var PolkadotRuntimeBenchmarkConfigs = {
-  pallet: {
-    title: "Runtime Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/polkadot/src/weights/{output_file}",
-    ].join(" "),
-  },
-  polkadot: {
-    title: "Runtime Polkadot Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/polkadot/src/weights/{output_file}",
-    ].join(" "),
-  },
-  kusama: {
-    title: "Runtime Kusama Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=kusama-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/kusama/src/weights/{output_file}",
-    ].join(" "),
-  },
-  westend: {
-    title: "Runtime Westend Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=westend-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/westend/src/weights/{output_file}",
-    ].join(" "),
-  },
-  rococo: {
-    title: "Runtime Rococo Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=rococo-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/rococo/src/weights/{output_file}",
-    ].join(" "),
-  },
-  custom: {
-    title: "Runtime Custom",
-    benchCommand:
-      cargoRun + "--features runtime-benchmarks -- benchmark",
-  },
-}
-
 var MoonbeamRuntimeBenchmarkConfigs = {
   pallet: {
     title: "Runtime Pallet",
@@ -320,7 +217,7 @@ var MoonbeamRuntimeBenchmarkConfigs = {
       "--wasm-execution=compiled",
       "--heap-pages=4096",
       "--header=./file_header.txt",
-      "--output=./runtime/polkadot/src/weights/{output_file}",
+      "--output=./frame/{pallet_folder}/src/weights.rs",
     ].join(" "),
   },
   polkadot: {
@@ -339,7 +236,7 @@ var MoonbeamRuntimeBenchmarkConfigs = {
       "--wasm-execution=compiled",
       "--heap-pages=4096",
       "--header=./file_header.txt",
-      "--output=./runtime/polkadot/src/weights/{output_file}",
+      "--output=./frame/{pallet_folder}/src/weights.rs",
     ].join(" "),
   },
 }
@@ -476,13 +373,9 @@ function benchmarkRuntime(app, config) {
       extra = extra.join(" ").trim();
 
       var benchConfig
-      
+
       if (config.repo == "substrate" && config.id == "runtime") {
         benchConfig = SubstrateRuntimeBenchmarkConfigs[command]
-      } else if (config.repo == "polkadot" && config.id == "runtime") {
-        benchConfig = PolkadotRuntimeBenchmarkConfigs[command]
-      } else if (config.repo == "polkadot" && config.id == "xcm") {
-        benchConfig = PolkadotXcmBenchmarkConfigs[command]
       } else if (config.repo == "moonbeam" && config.id == "runtime") {
         benchConfig = MoonbeamRuntimeBenchmarkConfigs[command]
       } else {
