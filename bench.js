@@ -25,6 +25,8 @@ function BenchContext(app, config) {
       stderr = "",
       error = true
 
+    console.log(`BenchContext.runTask(): ${cmd}`);
+
     try {
       if (title) {
         app.log({ title, msg: `Running task on directory ${process.cwd()}` })
@@ -71,8 +73,7 @@ const prepareBranch = async function (
   shell.mkdir(gitDirectory)
 
   const repositoryPath = path.join(gitDirectory, repo)
-  // var { url } = await getPushDomain()
-  var url = "https://github.com";
+  var { url } = await getPushDomain()
   benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`)
   shell.cd(repositoryPath)
 
@@ -87,15 +88,12 @@ const prepareBranch = async function (
   const detachedHead = stdout.trim()
 
   // Check out to the detached head so that any branch can be deleted
-  console.log(`--- calling git checkout ${detachedHead}`);
   var { error, stderr } = benchContext.runTask(`git checkout ${detachedHead}`)
   if (error) return errorResult(stderr)
 
   // Recreate PR remote
-  console.log(`--- calling git remote remove pr`);
   benchContext.runTask("git remote remove pr")
-  // var { url } = await getPushDomain()
-  console.log(`--- calling git remote add pr ${url}/${contributor}/${repo}.git`);
+  var { url } = await getPushDomain()
   var { error, stderr } = benchContext.runTask(
     `git remote add pr ${url}/${contributor}/${repo}.git`,
   )
@@ -383,9 +381,12 @@ function benchmarkRuntime(app, config) {
 
       var benchConfig
 
-      if (config.repo == "substrate" && config.id == "runtime") {
+      // XXX: testing
+      const repo = config.repo.startsWith("moonbeam") ? "moonbeam" : config.repo;
+
+      if (repo == "substrate" && config.id == "runtime") {
         benchConfig = SubstrateRuntimeBenchmarkConfigs[command]
-      } else if (config.repo == "moonbeam" && config.id == "runtime") {
+      } else if (repo == "moonbeam" && config.id == "runtime") {
         benchConfig = MoonbeamRuntimeBenchmarkConfigs[command]
       } else {
         return errorResult(
