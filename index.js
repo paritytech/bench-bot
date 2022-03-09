@@ -3,7 +3,7 @@ const assert = require("assert")
 const fs = require("fs")
 const shell = require("shelljs")
 
-var { benchBranch, benchmarkRuntime, benchRustup } = require("./bench")
+var { benchmarkRuntime, benchRustup } = require("./bench")
 
 const githubCommentLimitLength = 65536
 const githubCommentLimitTruncateMessage = "<truncated>..."
@@ -61,6 +61,7 @@ module.exports = (app) => {
   })
 
   app.on("issue_comment", async (context) => {
+    console.log("app.on('issue_comment'); ...");
     let commentText = context.payload.comment.body
     const triggerCommand = "/bench"
     if (
@@ -73,6 +74,7 @@ module.exports = (app) => {
 
     try {
       const installationId = (context.payload.installation || {}).id
+      console.log(`installationId: ${installationId}`);
       if (!installationId) {
         await context.octokit.issues.createComment(
           context.issue({
@@ -81,6 +83,7 @@ module.exports = (app) => {
         )
         return
       }
+      console.log("getting push domain...");
 
       const getPushDomain = async function () {
         const token = (
@@ -91,9 +94,16 @@ module.exports = (app) => {
         return { url, token }
       }
 
+      console.log("getting repository details from payload...");
+
       const repo = context.payload.repository.name
       const owner = context.payload.repository.owner.login
       const pull_number = context.payload.issue.number
+
+      console.log("    details:");
+      console.log({repo, owner, pull_number});
+
+      console.log("inspecting comment text...");
 
       // Capture `<action>` in `/bench <action> <extra>`
       let [action, ...extra] = commentText.slice(triggerCommand.length).trim().split(" ")
@@ -142,13 +152,18 @@ module.exports = (app) => {
         getPushDomain,
       }
 
+      // kick off the build/run process...
       let report
       if (action == "runtime" || action == "xcm") {
         report = await benchmarkRuntime(app, config)
       } else if (action == "rustup") {
         report = await benchRustup(app, config)
       } else {
-        report = await benchBranch(app, config)
+        report = {
+          isError: true,
+          message: "Unsupported action",
+          error: `unsupported action: ${action}`,
+        };
       }
       if (process.env.DEBUG) {
         console.log(report)
@@ -221,6 +236,12 @@ ${extraInfo}
         body,
       })
     } catch (error) {
+      console.log(error);
+
+      // TODO: repo (etc) is out of scope here which causes this catch block to error itself
+      const repo = "fixme";
+      const owner = "fixme";
+      const pull_number = "fixme";
       app.log.fatal({
         error,
         repo,

@@ -14,6 +14,7 @@ var shell = require("shelljs")
 
 var libCollector = require("./collector")
 
+// really just a context for running processes from a shell...
 function BenchContext(app, config) {
   var self = this
   self.app = app
@@ -70,7 +71,8 @@ const prepareBranch = async function (
   shell.mkdir(gitDirectory)
 
   const repositoryPath = path.join(gitDirectory, repo)
-  var { url } = await getPushDomain()
+  // var { url } = await getPushDomain()
+  var url = "https://github.com";
   benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`)
   shell.cd(repositoryPath)
 
@@ -85,12 +87,15 @@ const prepareBranch = async function (
   const detachedHead = stdout.trim()
 
   // Check out to the detached head so that any branch can be deleted
+  console.log(`--- calling git checkout ${detachedHead}`);
   var { error, stderr } = benchContext.runTask(`git checkout ${detachedHead}`)
   if (error) return errorResult(stderr)
 
   // Recreate PR remote
+  console.log(`--- calling git remote remove pr`);
   benchContext.runTask("git remote remove pr")
-  var { url } = await getPushDomain()
+  // var { url } = await getPushDomain()
+  console.log(`--- calling git remote add pr ${url}/${contributor}/${repo}.git`);
   var { error, stderr } = benchContext.runTask(
     `git remote add pr ${url}/${contributor}/${repo}.git`,
   )
@@ -122,11 +127,15 @@ function benchBranch(app, config) {
         return errorResult("Node benchmarks only available on Moonbeam.")
       }
 
+      console.log(`config id: ${config.id}`);
+
       var id = config.id
       var benchConfig = BenchConfigs[id]
       if (!benchConfig) {
         return errorResult(`Bench configuration for "${id}" was not found`)
       }
+
+      console.log(`bench command: ${benchConfig.benchCommand}`);
 
       const collector = new libCollector.Collector()
       var benchContext = new BenchContext(app, config)
@@ -523,7 +532,6 @@ function benchRustup(app, config) {
 }
 
 module.exports = {
-  benchBranch: benchBranch,
   benchmarkRuntime: benchmarkRuntime,
   benchRustup: benchRustup,
 }
