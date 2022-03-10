@@ -55,7 +55,8 @@ function BenchContext(app, config) {
 
 //::node::import::native::sr25519::transfer_keep_alive::paritydb::small
 
-const cargoRun = "cargo run --features=runtime-benchmarks --bin moonbeam -- ";
+// const cargoRun = "cargo run --features=runtime-benchmarks --bin moonbeam -- ";
+const cargoRun = "cargo run ";
 
 var BenchConfigs = {
   ed25519: {
@@ -74,7 +75,16 @@ const prepareBranch = async function (
 
   const repositoryPath = path.join(gitDirectory, repo)
   var { url } = await getPushDomain()
-  benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`)
+  console.log(`push domain: ${url}`);
+  var { error, stderr } = benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`);
+  if (error) {
+    // if dest path has a .git dir, ignore
+    // this error handling prevents subsequent git commands from interacting with the wrong repo
+    if (! shell.test('-d', repositoryPath + '/.git')) {
+      return errorResult(stderr)
+    }
+  }
+
   shell.cd(repositoryPath)
 
   var { error, stderr } = benchContext.runTask("git submodule update --init")
@@ -109,11 +119,15 @@ const prepareBranch = async function (
   if (error) return errorResult(stderr)
 
   // Fetch and merge master
+  // TODO: why merge master here...?
+  //       but also: why does this fail sometimes?
+  /*
   var { error, stderr } = benchContext.runTask(
     `git pull origin ${baseBranch}`,
     `Merging branch ${baseBranch}`,
   )
   if (error) return errorResult(stderr)
+  */
 }
 
 function benchBranch(app, config) {
@@ -212,38 +226,20 @@ var MoonbeamRuntimeBenchmarkConfigs = {
     title: "Runtime Pallet",
     benchCommand: [
       cargoRun,
+      "--bin moonbeam",
       "--features=runtime-benchmarks",
       "--",
       "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
+      "--chain=dev",
+      "--steps=1",
+      "--repeat=1",
       "--pallet={pallet_name}",
       '--extrinsic="*"',
       "--execution=wasm",
       "--wasm-execution=compiled",
       "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./frame/{pallet_folder}/src/weights.rs",
-    ].join(" "),
-  },
-  polkadot: {
-    title: "Runtime Polkadot Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./frame/{pallet_folder}/src/weights.rs",
+      // "--header=./file_header.txt",
+      "--output=./pallets/{pallet_folder}/src/weights.rs",
     ].join(" "),
   },
 }
@@ -399,6 +395,7 @@ function benchmarkRuntime(app, config) {
       }
 
       // Append extra flags to the end of the command
+      console.log(`********************** replacing {pallet_folder}, extra: ${extra}`);
       let benchCommand = benchConfig.benchCommand
       if (command == "custom") {
         // extra here should just be raw arguments to add to the command
@@ -411,9 +408,15 @@ function benchmarkRuntime(app, config) {
           ? extra.replace("::", "_") + ".rs"
           : ""
         benchCommand = benchCommand.replace("{output_file}", outputFile)
+        /*
+         * TODO: understand this and how it relates to moonbeam...
+         *
         // pallet folder should be just the name of the pallet, without the leading
         // "pallet_" or "frame_", then separated with "-"
         let palletFolder = extra.split("_").slice(1).join("-").trim()
+        */
+        let palletFolder = extra;
+        console.log(`calculated palletFolder: ${palletFolder}`);
         benchCommand = benchCommand.replace("{pallet_folder}", palletFolder)
       }
 
@@ -432,6 +435,7 @@ function benchmarkRuntime(app, config) {
       if (error) return error
 
       const outputFile = benchCommand.match(/--output(?:=|\s+)(".+?"|\S+)/)[1]
+      console.log(`outputFile: ${outputFile}`);
       var { stdout, stderr } = benchContext.runTask(
         benchCommand,
         `Running for branch ${config.branch}, ${outputFile ? `outputFile: ${outputFile}` : ""
