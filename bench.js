@@ -173,54 +173,6 @@ function benchBranch(app, config) {
   })
 }
 
-var SubstrateRuntimeBenchmarkConfigs = {
-  pallet: {
-    title: "Runtime Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--manifest-path=bin/node/cli/Cargo.toml",
-      "--",
-      "benchmark",
-      "--chain=dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--output=./frame/{pallet_folder}/src/weights.rs",
-      "--template=./.maintain/frame-weight-template.hbs",
-    ].join(" "),
-  },
-  substrate: {
-    title: "Runtime Substrate Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--manifest-path=bin/node/cli/Cargo.toml",
-      "--",
-      "benchmark",
-      "--chain=dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--output=./frame/{pallet_folder}/src/weights.rs",
-      "--template=./.maintain/frame-weight-template.hbs",
-    ].join(" "),
-  },
-  custom: {
-    title: "Runtime Custom",
-    benchCommand:
-      cargoRun + "--features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark",
-  },
-}
-
 var MoonbeamRuntimeBenchmarkConfigs = {
   pallet: {
     title: "Runtime Pallet",
@@ -239,95 +191,9 @@ var MoonbeamRuntimeBenchmarkConfigs = {
       "--wasm-execution=compiled",
       "--heap-pages=4096",
       // "--header=./file_header.txt",
+      "--template=./benchmarking/frame-weight-template.hbs",
       "--output=./pallets/{pallet_folder}/src/weights.rs",
     ].join(" "),
-  },
-}
-
-var PolkadotXcmBenchmarkConfigs = {
-  pallet: {
-    title: "XCM",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
-      "--output=./runtime/polkadot/src/weights/xcm/{output_file}",
-    ].join(" "),
-  },
-  polkadot: {
-    title: "Polkadot XCM",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
-      "--output=./runtime/polkadot/src/weights/xcm/{output_file}",
-    ].join(" "),
-  },
-  kusama: {
-    title: "Kusama XCM",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=kusama-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
-      "--output=./runtime/kusama/src/weights/xcm/{output_file}",
-    ].join(" "),
-  },
-  westend: {
-    title: "Westend XCM",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=westend-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
-      "--output=./runtime/westend/src/weights/xcm/{output_file}",
-    ].join(" "),
-  },
-  custom: {
-    title: "XCM Custom",
-    benchCommand:
-      cargoRun + "--features runtime-benchmarks -- benchmark",
   },
 }
 
@@ -380,9 +246,7 @@ function benchmarkRuntime(app, config) {
       // XXX: testing
       const repo = config.repo.startsWith("moonbeam") ? "moonbeam" : config.repo;
 
-      if (repo == "substrate" && config.id == "runtime") {
-        benchConfig = SubstrateRuntimeBenchmarkConfigs[command]
-      } else if (repo == "moonbeam" && config.id == "runtime") {
+      if (repo == "moonbeam" && config.id == "runtime") {
         benchConfig = MoonbeamRuntimeBenchmarkConfigs[command]
       } else {
         return errorResult(
