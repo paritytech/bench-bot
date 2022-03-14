@@ -230,6 +230,47 @@ function checkAllowedCharacters(command) {
   return true
 }
 
+// Moonbeam's pallet naming is inconsistent in several ways:
+// * the prefix "pallet-" being included or not in the crate name
+// * pallet's dir name (maybe?)
+// * where pallets are benchmarked (in their own repo or not)
+//
+// This function serves as a registry for all of this information.
+function matchMoonbeamPallet(palletIsh) {
+  switch(palletIsh) {
+
+    // "companion"
+    case "crowdloan-rewards":
+      return {
+        name: "crowdloan-rewards",
+        benchmark: "pallet_crowdloan_rewards",
+        dir: "", // TODO: how can this be included in the moonbeam codebase?
+      };
+
+    // found directly in the moonbeam repo
+    case "parachain-staking":
+      return {
+        name: "parachain-staking",
+        benchmark: "parachain_staking",
+        dir: "parachain-staking",
+      };
+    case "author-mapping":
+      return {
+        name: "author-mapping",
+        benchmark: "pallet_author_mapping",
+        dir: "author-mapping",
+      };
+    case "asset-manager":
+      return {
+        name: "asset-manager",
+        benchmark: "pallet_asset_manager",
+        dir: "asset-manager",
+      };
+  }
+
+  throw new Error(`Pallet argument not recognized: ${palletIsh}`);
+}
+
 function benchmarkRuntime(app, config) {
   app.log("Waiting our turn to run benchmarkRuntime...")
 
@@ -266,23 +307,28 @@ function benchmarkRuntime(app, config) {
         // extra here should just be raw arguments to add to the command
         benchCommand += " " + extra
       } else {
+        let palletInfo = matchMoonbeamPallet(extra);
+
         // extra here should be the name of a pallet
-        benchCommand = benchCommand.replace("{pallet_name}", extra)
+        benchCommand = benchCommand.replace("{pallet_name}", palletInfo.benchmark)
         // custom output file name so that pallets with path don't cause issues
+        /*
+         * TODO: what is this doing?
         let outputFile = extra.includes("::")
           ? extra.replace("::", "_") + ".rs"
           : ""
-        benchCommand = benchCommand.replace("{output_file}", outputFile)
+        */
+        benchCommand = benchCommand.replace("{output_file}", extra)
         /*
          * TODO: understand this and how it relates to moonbeam...
          *
         // pallet folder should be just the name of the pallet, without the leading
         // "pallet_" or "frame_", then separated with "-"
-        let palletFolder = extra.split("_").slice(1).join("-").trim()
-        */
+        // let palletFolder = extra.split("_").slice(1).join("-").trim()
         let palletFolder = extra;
         console.log(`calculated palletFolder: ${palletFolder}`);
-        benchCommand = benchCommand.replace("{pallet_folder}", palletFolder)
+        */
+        benchCommand = benchCommand.replace("{pallet_folder}", palletInfo.dir)
       }
 
       let missing = checkRuntimeBenchmarkCommand(benchCommand)
