@@ -178,8 +178,9 @@ var MoonbeamRuntimeBenchmarkConfigs = {
     title: "Runtime Pallet",
     benchCommand: [
       cargoRun,
+      "--release",
       "--bin moonbeam",
-      "--features=runtime-benchmarks",
+      "--features=runtime-benchmarks,moonbase-runtime-benchmarks",
       "--",
       "benchmark",
       "--chain=dev",
