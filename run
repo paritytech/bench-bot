@@ -239,12 +239,12 @@ handle_exec() {
           git config --local user.email admin@parity.io &&
           git config --local advice.detachedHead false &&
           yarn &&
-          while true; do
-            ${env_vars:-} yarn start 2>&1 | \
-              tee >(awk -v date=\"\$(date --rfc-3339=seconds)\" '{ print date \": \" \$0 }' >> \"$log_file\") | \
-              awk '{ print \"bb: \" \$0 }' | \
-              logger;
-            sleep 1;
+          while true; do \\
+            ${env_vars:-} 2>&1 yarn start | while IFS= read -r line; do \\
+              echo \"\$(date --rfc-3339=seconds): \$line\" >> \"$log_file\"; \\
+              logger \"bb: \$line\"; \\
+            done; \\
+            sleep 1; \\
           done
         "
       exit_if_error "Failed to create tmux session for user $benchbot_user"
