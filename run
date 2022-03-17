@@ -241,9 +241,9 @@ handle_exec() {
           yarn &&
           while true; do
             ${env_vars:-} yarn start 2>&1 | \
-              tee -a \"$log_file\" | \
+              tee >(awk -v date=\"\$(date --rfc-3339=seconds)\" '{ print date \": \" \$0 }' >> \"$log_file\") | \
               awk '{ print \"bb: \" \$0 }' | \
-              systemd-cat -t benchbot;
+              logger;
             sleep 1;
           done
         "
