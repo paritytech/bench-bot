@@ -26,7 +26,7 @@ exit_if_error() {
 
 check_executables() {
   for exe in "${executables[@]}"; do
-    if !which "$exe" &>/dev/null; then
+    if !type "$exe" &>/dev/null; then
       exit_with_error "Executable is missing: $exe"
     fi
   done
@@ -37,8 +37,7 @@ check_app_runtime_executables() {
     . ~/.cargo/env
   fi
   executables=(
-    rustup cargo git bash systemd-cat tee yarn awk tmux ionice sudo nice
-    wc cut
+    rustup cargo git bash yarn tmux ionice sudo nice wc cut logger sleep tail
   )
   check_executables
 }
