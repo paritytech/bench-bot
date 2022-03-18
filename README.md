@@ -51,9 +51,9 @@ The [run script](./run) is used to manage the application. Use `run help` for
 documentation about its options.
 
 `run bootstrap` will take care of creating and installing everything from
-scratch. For it to fully work, you'll also need to set up [environment
-variables](#configuration) which optionally can be done through a `.env` file
-in the bot's directory.
+scratch. After install, you'll also need to set up
+[environment variables](#configuration) which optionally can be done through
+a `.env` file in the bot's installation path.
 
 ### Bot commands
 
@@ -65,15 +65,7 @@ in the bot's directory.
 
 ### Logs
 
-- Logs from the systemd journal:
-  - `journalctl --follow --identifier benchbot` follows the output as if you
-    were running the command in the foreground
-  - `journalctl --pagerend --identifier benchbot` goes to the end of the output
-    in pager mode and therefore allows you paginate through the history
-  - This log is cleared between machine restarts
-
-- Full log history: `less +G /home/benchbot/bench-bot/log.txt`
-  - This log is only cleared manually
+See <https://gitlab.parity.io/groups/parity/opstooling/-/wikis>
 
 # Required Github settings
 
