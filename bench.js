@@ -14,6 +14,7 @@ var shell = require("shelljs")
 
 var libCollector = require("./collector")
 
+// really just a context for running processes from a shell...
 function BenchContext(app, config) {
   var self = this
   self.app = app
@@ -23,6 +24,8 @@ function BenchContext(app, config) {
     let stdout = "",
       stderr = "",
       error = true
+
+    console.log(`BenchContext.runTask(): ${cmd}`);
 
     try {
       if (title) {
@@ -52,38 +55,14 @@ function BenchContext(app, config) {
 
 //::node::import::native::sr25519::transfer_keep_alive::paritydb::small
 
-const cargoRun = "cargo run --quiet --profile=production ";
+// const cargoRun = "cargo run --features=runtime-benchmarks --bin moonbeam -- ";
+const cargoRun = "cargo run ";
 
 var BenchConfigs = {
-  import: {
-    title: "Import Benchmark (random transfers)",
-    benchCommand:
-      cargoRun + "-p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::medium --json",
-  },
-  "import/small": {
-    title: "Import Benchmark (Small block (10tx) with random transfers)",
-    benchCommand:
-      cargoRun + "-p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::small --json",
-  },
-  "import/large": {
-    title: "Import Benchmark (Large block (500tx) with random transfers)",
-    benchCommand:
-      cargoRun + "-p node-bench --quiet -- node::import::native::sr25519::transfer_keep_alive::rocksdb::large --json",
-  },
-  "import/full-wasm": {
-    title: "Import Benchmark (Full block with wasm, for weights validation)",
-    benchCommand:
-      cargoRun + "-p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::full --json",
-  },
-  "import/wasm": {
-    title: "Import Benchmark via wasm (random transfers)",
-    benchCommand:
-      cargoRun + "-p node-bench --quiet -- node::import::wasm::sr25519::transfer_keep_alive::rocksdb::medium --json",
-  },
   ed25519: {
     title: "Import Benchmark (random transfers, ed25519 signed)",
     benchCommand:
-      cargoRun + "-p node-bench --quiet -- node::import::native::ed25519::transfer_keep_alive::rocksdb::medium --json",
+      cargoRun + "benchmark --chain dev --execution=native --pallet \"*\" --extrinsic \"*\" --steps 32 --repeat 8 --json --record-proof"
   },
 }
 
@@ -96,8 +75,20 @@ const prepareBranch = async function (
 
   const repositoryPath = path.join(gitDirectory, repo)
   var { url } = await getPushDomain()
-  benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`)
+  console.log(`push domain: ${url}`);
+  var { error, stderr } = benchContext.runTask(`git clone ${url}/${owner}/${repo} ${repositoryPath}`);
+  if (error) {
+    // if dest path has a .git dir, ignore
+    // this error handling prevents subsequent git commands from interacting with the wrong repo
+    if (! shell.test('-d', repositoryPath + '/.git')) {
+      return errorResult(stderr)
+    }
+  }
+
   shell.cd(repositoryPath)
+
+  var { error, stderr } = benchContext.runTask("git submodule update --init")
+  if (error) return errorResult(stderr)
 
   var { error } = benchContext.runTask("git add . && git reset --hard HEAD")
   if (error) return errorResult(stderr)
@@ -128,11 +119,15 @@ const prepareBranch = async function (
   if (error) return errorResult(stderr)
 
   // Fetch and merge master
+  // TODO: why merge master here...?
+  //       but also: why does this fail sometimes?
+  /*
   var { error, stderr } = benchContext.runTask(
     `git pull origin ${baseBranch}`,
     `Merging branch ${baseBranch}`,
   )
   if (error) return errorResult(stderr)
+  */
 }
 
 function benchBranch(app, config) {
@@ -140,15 +135,19 @@ function benchBranch(app, config) {
 
   return mutex.runExclusive(async function () {
     try {
-      if (config.repo != "substrate") {
-        return errorResult("Node benchmarks only available on Substrate.")
+      if (config.repo != "moonbeam") {
+        return errorResult("Node benchmarks only available on Moonbeam.")
       }
+
+      console.log(`config id: ${config.id}`);
 
       var id = config.id
       var benchConfig = BenchConfigs[id]
       if (!benchConfig) {
         return errorResult(`Bench configuration for "${id}" was not found`)
       }
+
+      console.log(`bench command: ${benchConfig.benchCommand}`);
 
       const collector = new libCollector.Collector()
       var benchContext = new BenchContext(app, config)
@@ -174,241 +173,28 @@ function benchBranch(app, config) {
   })
 }
 
-var SubstrateRuntimeBenchmarkConfigs = {
+var MoonbeamRuntimeBenchmarkConfigs = {
   pallet: {
     title: "Runtime Pallet",
     benchCommand: [
       cargoRun,
-      "--features=runtime-benchmarks",
-      "--manifest-path=bin/node/cli/Cargo.toml",
+      "--release",
+      "--bin moonbeam",
+      "--features=runtime-benchmarks,moonbase-runtime-benchmarks",
       "--",
       "benchmark",
       "--chain=dev",
-      "--steps=50",
-      "--repeat=20",
+      "--steps=1",
+      "--repeat=1",
       "--pallet={pallet_name}",
       '--extrinsic="*"',
       "--execution=wasm",
       "--wasm-execution=compiled",
       "--heap-pages=4096",
-      "--output=./frame/{pallet_folder}/src/weights.rs",
-      "--template=./.maintain/frame-weight-template.hbs",
+      // "--header=./file_header.txt",
+      "--template=./benchmarking/frame-weight-template.hbs",
+      "--output=./pallets/{pallet_folder}/src/weights.rs",
     ].join(" "),
-  },
-  substrate: {
-    title: "Runtime Substrate Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--manifest-path=bin/node/cli/Cargo.toml",
-      "--",
-      "benchmark",
-      "--chain=dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--output=./frame/{pallet_folder}/src/weights.rs",
-      "--template=./.maintain/frame-weight-template.hbs",
-    ].join(" "),
-  },
-  custom: {
-    title: "Runtime Custom",
-    benchCommand:
-      cargoRun + "--features runtime-benchmarks --manifest-path bin/node/cli/Cargo.toml -- benchmark",
-  },
-}
-
-var PolkadotRuntimeBenchmarkConfigs = {
-  pallet: {
-    title: "Runtime Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/polkadot/src/weights/{output_file}",
-    ].join(" "),
-  },
-  polkadot: {
-    title: "Runtime Polkadot Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/polkadot/src/weights/{output_file}",
-    ].join(" "),
-  },
-  kusama: {
-    title: "Runtime Kusama Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=kusama-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/kusama/src/weights/{output_file}",
-    ].join(" "),
-  },
-  westend: {
-    title: "Runtime Westend Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=westend-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/westend/src/weights/{output_file}",
-    ].join(" "),
-  },
-  rococo: {
-    title: "Runtime Rococo Pallet",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=rococo-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--output=./runtime/rococo/src/weights/{output_file}",
-    ].join(" "),
-  },
-  custom: {
-    title: "Runtime Custom",
-    benchCommand:
-      cargoRun + "--features runtime-benchmarks -- benchmark",
-  },
-}
-
-var PolkadotXcmBenchmarkConfigs = {
-  pallet: {
-    title: "XCM",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
-      "--output=./runtime/polkadot/src/weights/xcm/{output_file}",
-    ].join(" "),
-  },
-  polkadot: {
-    title: "Polkadot XCM",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=polkadot-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
-      "--output=./runtime/polkadot/src/weights/xcm/{output_file}",
-    ].join(" "),
-  },
-  kusama: {
-    title: "Kusama XCM",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=kusama-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
-      "--output=./runtime/kusama/src/weights/xcm/{output_file}",
-    ].join(" "),
-  },
-  westend: {
-    title: "Westend XCM",
-    benchCommand: [
-      cargoRun,
-      "--features=runtime-benchmarks",
-      "--",
-      "benchmark",
-      "--chain=westend-dev",
-      "--steps=50",
-      "--repeat=20",
-      "--pallet={pallet_name}",
-      '--extrinsic="*"',
-      "--execution=wasm",
-      "--wasm-execution=compiled",
-      "--heap-pages=4096",
-      "--header=./file_header.txt",
-      "--template=./xcm/pallet-xcm-benchmarks/template.hbs",
-      "--output=./runtime/westend/src/weights/xcm/{output_file}",
-    ].join(" "),
-  },
-  custom: {
-    title: "XCM Custom",
-    benchCommand:
-      cargoRun + "--features runtime-benchmarks -- benchmark",
   },
 }
 
@@ -444,6 +230,47 @@ function checkAllowedCharacters(command) {
   return true
 }
 
+// Moonbeam's pallet naming is inconsistent in several ways:
+// * the prefix "pallet-" being included or not in the crate name
+// * pallet's dir name (maybe?)
+// * where pallets are benchmarked (in their own repo or not)
+//
+// This function serves as a registry for all of this information.
+function matchMoonbeamPallet(palletIsh) {
+  switch(palletIsh) {
+
+    // "companion"
+    case "crowdloan-rewards":
+      return {
+        name: "crowdloan-rewards",
+        benchmark: "pallet_crowdloan_rewards",
+        dir: "", // TODO: how can this be included in the moonbeam codebase?
+      };
+
+    // found directly in the moonbeam repo
+    case "parachain-staking":
+      return {
+        name: "parachain-staking",
+        benchmark: "parachain_staking",
+        dir: "parachain-staking",
+      };
+    case "author-mapping":
+      return {
+        name: "author-mapping",
+        benchmark: "pallet_author_mapping",
+        dir: "author-mapping",
+      };
+    case "asset-manager":
+      return {
+        name: "asset-manager",
+        benchmark: "pallet_asset_manager",
+        dir: "asset-manager",
+      };
+  }
+
+  throw new Error(`Pallet argument not recognized: ${palletIsh}`);
+}
+
 function benchmarkRuntime(app, config) {
   app.log("Waiting our turn to run benchmarkRuntime...")
 
@@ -453,44 +280,55 @@ function benchmarkRuntime(app, config) {
         return errorResult(`Incomplete command.`)
       }
 
-      let command = config.extra.split(" ")[0]
+      let [command, ...extra] = config.extra.split(" ")
+      extra = extra.join(" ").trim();
 
       var benchConfig
-      if (config.repo == "substrate" && config.id == "runtime") {
-        benchConfig = SubstrateRuntimeBenchmarkConfigs[command]
-      } else if (config.repo == "polkadot" && config.id == "runtime") {
-        benchConfig = PolkadotRuntimeBenchmarkConfigs[command]
-      } else if (config.repo == "polkadot" && config.id == "xcm") {
-        benchConfig = PolkadotXcmBenchmarkConfigs[command]
+
+      // XXX: testing
+      const repo = config.repo.startsWith("moonbeam") ? "moonbeam" : config.repo;
+
+      if (repo == "moonbeam" && config.id == "runtime") {
+        benchConfig = MoonbeamRuntimeBenchmarkConfigs[command]
       } else {
         return errorResult(
           `${config.repo} repo with ${config.id} is not supported.`,
         )
       }
 
-      var extra = config.extra.split(" ").slice(1).join(" ").trim()
-
       if (!checkAllowedCharacters(extra)) {
         return errorResult(`Not allowed to use #&|; in the command!`)
       }
 
       // Append extra flags to the end of the command
+      console.log(`********************** replacing {pallet_folder}, extra: ${extra}`);
       let benchCommand = benchConfig.benchCommand
       if (command == "custom") {
         // extra here should just be raw arguments to add to the command
         benchCommand += " " + extra
       } else {
+        let palletInfo = matchMoonbeamPallet(extra);
+
         // extra here should be the name of a pallet
-        benchCommand = benchCommand.replace("{pallet_name}", extra)
+        benchCommand = benchCommand.replace("{pallet_name}", palletInfo.benchmark)
         // custom output file name so that pallets with path don't cause issues
+        /*
+         * TODO: what is this doing?
         let outputFile = extra.includes("::")
           ? extra.replace("::", "_") + ".rs"
           : ""
-        benchCommand = benchCommand.replace("{output_file}", outputFile)
+        */
+        benchCommand = benchCommand.replace("{output_file}", extra)
+        /*
+         * TODO: understand this and how it relates to moonbeam...
+         *
         // pallet folder should be just the name of the pallet, without the leading
         // "pallet_" or "frame_", then separated with "-"
-        let palletFolder = extra.split("_").slice(1).join("-").trim()
-        benchCommand = benchCommand.replace("{pallet_folder}", palletFolder)
+        // let palletFolder = extra.split("_").slice(1).join("-").trim()
+        let palletFolder = extra;
+        console.log(`calculated palletFolder: ${palletFolder}`);
+        */
+        benchCommand = benchCommand.replace("{pallet_folder}", palletInfo.dir)
       }
 
       let missing = checkRuntimeBenchmarkCommand(benchCommand)
@@ -508,6 +346,7 @@ function benchmarkRuntime(app, config) {
       if (error) return error
 
       const outputFile = benchCommand.match(/--output(?:=|\s+)(".+?"|\S+)/)[1]
+      console.log(`outputFile: ${outputFile}`);
       var { stdout, stderr } = benchContext.runTask(
         benchCommand,
         `Running for branch ${config.branch}, ${outputFile ? `outputFile: ${outputFile}` : ""
@@ -609,7 +448,6 @@ function benchRustup(app, config) {
 }
 
 module.exports = {
-  benchBranch: benchBranch,
   benchmarkRuntime: benchmarkRuntime,
   benchRustup: benchRustup,
 }

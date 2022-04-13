@@ -20,7 +20,7 @@
     "@octokit/auth-app": "^3.5.3",
     "@octokit/webhooks": "^9.17.0",
     "async-mutex": "^0.3.1",
-    "probot": "^12.1.0",
+    "probot": "^12.2.2",
     "shelljs": "^0.8.4",
     "smee-client": "^1.2.2"
   },
