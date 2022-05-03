@@ -102,11 +102,14 @@ module.exports = (app) => {
     try {
       const installationId = (context.payload.installation || {}).id
       if (!installationId) {
+        /*
         await context.octokit.issues.createComment(
           context.issue({
             body: `Error: Installation id was missing from webhook payload`,
           }),
         )
+        */
+        app.log.error("Installation id was missing from webhook payload");
         return
       }
 
@@ -146,11 +149,14 @@ module.exports = (app) => {
         { silent: false },
       )
       if (toolchainError) {
+        /*
         await context.octokit.issues.createComment(
           context.issue({
             body: "ERROR: Failed to query the currently active Rust toolchain",
           }),
         )
+        */
+        app.log.fatal("ERROR: Failed to query the currently active Rust toolchain");
         return
       } else {
         toolchain = toolchain.trim()
@@ -158,8 +164,9 @@ module.exports = (app) => {
 
       const initialInfo = `Starting benchmark for branch: ${branch} (vs ${baseBranch})\n\nToolchain: \n${toolchain}\n\n Comment will be updated.`
       let comment_id = undefined
-      if (process.env.DEBUG) {
+      // if (process.env.DEBUG) {
         app.log(initialInfo)
+      /*
       } else {
         const issueComment = context.issue({ body: initialInfo })
         const issue_comment = await context.octokit.issues.createComment(
@@ -167,6 +174,7 @@ module.exports = (app) => {
         )
         comment_id = issue_comment.data.id
       }
+      */
 
       let config = {
         owner,
@@ -210,12 +218,14 @@ module.exports = (app) => {
         const output = `${report.message}${report.error ? `: ${report.error.toString()}` : ""
           }`
 
+        /*
         await context.octokit.issues.updateComment({
           owner,
           repo,
           comment_id,
           body: `Error running benchmark: **${branch}**\n\n<details><summary>stdout</summary>${output}</details>`,
         })
+        */
 
         return
       }
@@ -259,16 +269,19 @@ ${bodySuffix}
 ${extraInfo}
 `.trim()
 
+      /*
       await context.octokit.issues.updateComment({
         owner,
         repo,
         comment_id,
         body,
       })
+      */
     } catch (error) {
       console.log(error);
 
       // TODO: repo (etc) is out of scope here which causes this catch block to error itself
+      /*
       const repo = "fixme";
       const owner = "fixme";
       const pull_number = "fixme";
@@ -284,6 +297,7 @@ ${extraInfo}
           body: `Exception caught: \`${error.message}\`\n${error.stack}`,
         }),
       )
+      */
     }
   })
 }
