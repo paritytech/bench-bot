@@ -25,7 +25,7 @@
     "smee-client": "^1.2.2"
   },
   "devDependencies": {
-    "jest": "^27.0.6",
+    "jest": "^28.1.0",
     "nodemon": "^2.0.9",
     "prettier": "^2.4.0",
     "prettier-plugin-compactify": "^0.1.4"
