@@ -411,13 +411,13 @@ function benchmarkRuntime(app, config, octokit) {
           try {
 
             await octokit.pulls.create({
-              owner: config.bbRepoOwner,
-              repo: config.bbRepo,
+              owner: config.owner,
+              repo: config.repo,
               title: "Updated Weights",
               head: `${config.bbRepoOwner}:${config.branch}`, // TODO: may need tweaking (provide git hash?)
               base: config.branch,
               body: `Weights have been updated`, // TODO
-              maintainer_can_modify: true,
+              maintainer_can_modify: false,
 
             })
           } catch (error) {
