@@ -191,6 +191,7 @@ var MoonbeamRuntimeBenchmarkConfigs = {
       "--features=runtime-benchmarks,moonbase-runtime-benchmarks",
       "--",
       "benchmark",
+      "pallet",
       "--chain=dev",
       "--steps=1",
       "--repeat=1",
