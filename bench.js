@@ -67,7 +67,7 @@ var BenchConfigs = {
 }
 
 const prepareBranch = async function (
-  { contributor, owner, repo, bbRepo, bbRepoOwner, branch, baseBranch, getPushDomain, getBBPushDomain, },
+  { contributor, owner, repo, bbRepo, bbRepoOwner, bbBranch, branch, baseBranch, getPushDomain, getBBPushDomain, },
   { benchContext },
 ) {
   const gitDirectory = path.join(cwd, "git")
@@ -136,6 +136,12 @@ const prepareBranch = async function (
   )
   if (error) return errorResult(stderr)
   */
+
+  var { error, stderr } = benchContext.runTask(
+    `git checkout -b ${bbBranch}`
+  )
+  if (error)
+    return errorResult(`Failed to "git checkout -b" our secondary branch`);
 }
 
 function benchBranch(app, config) {
@@ -389,7 +395,7 @@ function benchmarkRuntime(app, config, octokit) {
               const { url, token } = await config.getBBPushDomain()
               // TODO: a unique branch should be used to avoid conflicts
               var last = benchContext.runTask(
-                `git remote set-url bb_pr_repo ${url}/${config.bbRepoOwner}/${config.bbRepo}.git && git push bb_pr_repo HEAD`,
+                `git remote set-url bb_pr_repo ${url}/${config.bbRepoOwner}/${config.bbRepo}.git && git push bb_pr_repo ${config.bbBranch}`,
                 `Pushing ${outputFile} to ${config.branch}`,
               )
               if (last.error) {
