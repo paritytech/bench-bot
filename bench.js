@@ -316,7 +316,6 @@ function benchmarkRuntime(app, config, octokit) {
       }
 
       // Append extra flags to the end of the command
-      console.log(`********************** replacing {pallet_folder}, extra: ${extra}`);
       let benchCommand = benchConfig.benchCommand
       if (command == "custom") {
         // extra here should just be raw arguments to add to the command
