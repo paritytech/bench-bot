@@ -158,6 +158,9 @@ module.exports = (app) => {
         toolchain = toolchain.trim()
       }
 
+      // generate a unique branch for our PR
+      const bbBranch = `${branch}-benchbot-job-${new Date().getTime()}`;
+
       const initialInfo = `Starting benchmark for branch: ${branch} (vs ${baseBranch})\nPR branch will be ${bbBranch}\n\nToolchain: \n${toolchain}\n\n Comment will be updated.`
       let comment_id = undefined
 
@@ -167,9 +170,6 @@ module.exports = (app) => {
         issueComment,
       )
       comment_id = issue_comment.data.id
-
-      // generate a unique branch for our PR
-      const bbBranch = `${branch}-benchbot-job-${new Date().getTime()}`;
 
       let config = {
         owner,
