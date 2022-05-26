@@ -426,8 +426,10 @@ function benchmarkRuntime(app, config, octokit) {
 
             })
           } catch (error) {
+            console.log(`Error while trying to create pull request:`);
+            console.log(error);
             extraInfo =
-              "NOTE: Caught exception while trying to create pull request"
+              `NOTE: Caught exception while trying to create pull request: ${error}`
             app.log.fatal({ msg: extraInfo, error })
           }
         }
