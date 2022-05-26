@@ -419,7 +419,7 @@ function benchmarkRuntime(app, config, octokit) {
               owner: config.owner,
               repo: config.repo,
               title: "Updated Weights",
-              head: `${config.bbRepoOwner}:${config.branch}`, // TODO: may need tweaking (provide git hash?)
+              head: `${config.bbRepoOwner}:${config.bbBranch}`,
               base: config.branch,
               body: `Weights have been updated`, // TODO
               maintainer_can_modify: false,
