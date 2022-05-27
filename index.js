@@ -53,6 +53,27 @@ module.exports = (app) => {
   const privateKey = fs.readFileSync(privateKeyPath).toString()
   assert(privateKey)
 
+  const bbRepo = process.env.BB_REPO;
+  assert(bbRepo)
+
+  const bbRepoOwner = process.env.BB_REPO_OWNER;
+  assert(bbRepoOwner)
+
+  const bbAppId = parseInt(process.env.BB_APP_ID)
+  assert(bbAppId)
+
+  const bbInstallationId = parseInt(process.env.BB_INSTALLATION_ID)
+  assert(bbInstallationId)
+
+  const bbClientId = process.env.BB_CLIENT_ID
+  assert(bbClientId)
+  const bbClientSecret = process.env.BB_CLIENT_SECRET
+  assert(bbClientSecret)
+
+  const bbPrivateKeyPath = process.env.BB_PRIVATE_KEY_PATH
+  assert(bbPrivateKeyPath)
+  const bbPrivateKey = fs.readFileSync(bbPrivateKeyPath).toString()
+  assert(bbPrivateKey)
   const authInstallation = createAppAuth({
     appId,
     privateKey,
@@ -60,8 +81,14 @@ module.exports = (app) => {
     clientSecret,
   })
 
+  const bbAuthInstallation = createAppAuth({
+    appId: bbAppId,
+    privateKey: bbPrivateKey,
+    clientId: bbClientId,
+    clientSecret: bbClientSecret,
+  });
+
   app.on("issue_comment", async (context) => {
-    console.log("app.on('issue_comment'); ...");
     let commentText = context.payload.comment.body
     const triggerCommand = "/bench"
     if (
@@ -74,16 +101,15 @@ module.exports = (app) => {
 
     try {
       const installationId = (context.payload.installation || {}).id
-      console.log(`installationId: ${installationId}`);
       if (!installationId) {
         await context.octokit.issues.createComment(
           context.issue({
             body: `Error: Installation id was missing from webhook payload`,
           }),
         )
+        app.log.error("Installation id was missing from webhook payload");
         return
       }
-      console.log("getting push domain...");
 
       const getPushDomain = async function () {
         const token = (
@@ -94,16 +120,18 @@ module.exports = (app) => {
         return { url, token }
       }
 
-      console.log("getting repository details from payload...");
+      const getBBPushDomain = async function () {
+        const token = (
+          await bbAuthInstallation({ type: "installation", installationId: bbInstallationId })
+        ).token
+
+        const url = `https://x-access-token:${token}@github.com`
+        return { url, token }
+      }
 
       const repo = context.payload.repository.name
       const owner = context.payload.repository.owner.login
       const pull_number = context.payload.issue.number
-
-      console.log("    details:");
-      console.log({repo, owner, pull_number});
-
-      console.log("inspecting comment text...");
 
       // Capture `<action>` in `/bench <action> <extra>`
       let [action, ...extra] = commentText.slice(triggerCommand.length).trim().split(" ")
@@ -124,38 +152,44 @@ module.exports = (app) => {
             body: "ERROR: Failed to query the currently active Rust toolchain",
           }),
         )
+        app.log.fatal("ERROR: Failed to query the currently active Rust toolchain");
         return
       } else {
         toolchain = toolchain.trim()
       }
 
-      const initialInfo = `Starting benchmark for branch: ${branch} (vs ${baseBranch})\n\nToolchain: \n${toolchain}\n\n Comment will be updated.`
+      // generate a unique branch for our PR
+      const bbBranch = `${branch}-benchbot-job-${new Date().getTime()}`;
+
+      const initialInfo = `Starting benchmark for branch: ${branch} (vs ${baseBranch})\nPR branch will be ${bbBranch}\n\nToolchain: \n${toolchain}\n\n Comment will be updated.`
       let comment_id = undefined
-      if (process.env.DEBUG) {
-        app.log(initialInfo)
-      } else {
-        const issueComment = context.issue({ body: initialInfo })
-        const issue_comment = await context.octokit.issues.createComment(
-          issueComment,
-        )
-        comment_id = issue_comment.data.id
-      }
+
+      app.log(initialInfo)
+      const issueComment = context.issue({ body: initialInfo })
+      const issue_comment = await context.octokit.issues.createComment(
+        issueComment,
+      )
+      comment_id = issue_comment.data.id
 
       let config = {
         owner,
         contributor,
         repo,
+        bbRepo,
+        bbRepoOwner,
+        bbBranch,
         branch,
         baseBranch,
         id: action,
         extra,
         getPushDomain,
+        getBBPushDomain,
       }
 
       // kick off the build/run process...
       let report
       if (action == "runtime" || action == "xcm") {
-        report = await benchmarkRuntime(app, config)
+        report = await benchmarkRuntime(app, config, context.octokit)
       } else if (action == "rustup") {
         report = await benchRustup(app, config)
       } else {
@@ -180,12 +214,14 @@ module.exports = (app) => {
         const output = `${report.message}${report.error ? `: ${report.error.toString()}` : ""
           }`
 
+        /*
         await context.octokit.issues.updateComment({
           owner,
           repo,
           comment_id,
           body: `Error running benchmark: **${branch}**\n\n<details><summary>stdout</summary>${output}</details>`,
         })
+        */
 
         return
       }
@@ -238,10 +274,6 @@ ${extraInfo}
     } catch (error) {
       console.log(error);
 
-      // TODO: repo (etc) is out of scope here which causes this catch block to error itself
-      const repo = "fixme";
-      const owner = "fixme";
-      const pull_number = "fixme";
       app.log.fatal({
         error,
         repo,

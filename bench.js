@@ -67,7 +67,7 @@ var BenchConfigs = {
 }
 
 const prepareBranch = async function (
-  { contributor, owner, repo, branch, baseBranch, getPushDomain },
+  { contributor, owner, repo, bbRepo, bbRepoOwner, bbBranch, branch, baseBranch, getPushDomain, getBBPushDomain, },
   { benchContext },
 ) {
   const gitDirectory = path.join(cwd, "git")
@@ -102,10 +102,18 @@ const prepareBranch = async function (
   if (error) return errorResult(stderr)
 
   // Recreate PR remote
-  benchContext.runTask("git remote remove pr")
+  benchContext.runTask("git remote remove original_pr_repo")
   var { url } = await getPushDomain()
   var { error, stderr } = benchContext.runTask(
-    `git remote add pr ${url}/${contributor}/${repo}.git`,
+    `git remote add original_pr_repo ${url}/${contributor}/${repo}.git`,
+  )
+  if (error)
+    return errorResult(`Failed to add remote reference to ${owner}/${repo}`)
+
+  var bbUrl = (await getBBPushDomain()).url;
+  benchContext.runTask("git remote remove bb_pr_repo")
+  var { error, stderr } = benchContext.runTask(
+    `git remote add bb_pr_repo ${bbUrl}/${bbRepoOwner}/${bbRepo}.git`,
   )
   if (error)
     return errorResult(`Failed to add remote reference to ${owner}/${repo}`)
@@ -113,7 +121,7 @@ const prepareBranch = async function (
   // Fetch and recreate the PR's branch
   benchContext.runTask(`git branch -D ${branch}`)
   var { error, stderr } = benchContext.runTask(
-    `git fetch pr ${branch} && git checkout --track pr/${branch}`,
+    `git fetch original_pr_repo ${branch} && git checkout --track original_pr_repo/${branch}`,
     `Checking out ${branch}...`,
   )
   if (error) return errorResult(stderr)
@@ -128,6 +136,12 @@ const prepareBranch = async function (
   )
   if (error) return errorResult(stderr)
   */
+
+  var { error, stderr } = benchContext.runTask(
+    `git checkout -b ${bbBranch}`
+  )
+  if (error)
+    return errorResult(`Failed to "git checkout -b" our secondary branch`);
 }
 
 function benchBranch(app, config) {
@@ -183,6 +197,7 @@ var MoonbeamRuntimeBenchmarkConfigs = {
       "--features=runtime-benchmarks,moonbase-runtime-benchmarks",
       "--",
       "benchmark",
+      "pallet",
       "--chain=dev",
       "--steps=1",
       "--repeat=1",
@@ -271,7 +286,7 @@ function matchMoonbeamPallet(palletIsh) {
   throw new Error(`Pallet argument not recognized: ${palletIsh}`);
 }
 
-function benchmarkRuntime(app, config) {
+function benchmarkRuntime(app, config, octokit) {
   app.log("Waiting our turn to run benchmarkRuntime...")
 
   return mutex.runExclusive(async function () {
@@ -301,7 +316,6 @@ function benchmarkRuntime(app, config) {
       }
 
       // Append extra flags to the end of the command
-      console.log(`********************** replacing {pallet_folder}, extra: ${extra}`);
       let benchCommand = benchConfig.benchCommand
       if (command == "custom") {
         // extra here should just be raw arguments to add to the command
@@ -377,10 +391,10 @@ function benchmarkRuntime(app, config) {
                 stderr: last.stderr,
               })
             } else {
-              const target = `${config.contributor}/${config.repo}`
-              const { url, token } = await config.getPushDomain()
+              const { url, token } = await config.getBBPushDomain()
+              // TODO: a unique branch should be used to avoid conflicts
               var last = benchContext.runTask(
-                `git remote set-url pr ${url}/${target}.git && git push pr HEAD`,
+                `git remote set-url bb_pr_repo ${url}/${config.bbRepoOwner}/${config.bbRepo}.git && git push bb_pr_repo ${config.bbBranch}`,
                 `Pushing ${outputFile} to ${config.branch}`,
               )
               if (last.error) {
@@ -391,10 +405,31 @@ function benchmarkRuntime(app, config) {
                   stderr: last.stderr,
                 })
               }
+
             }
           } catch (error) {
             extraInfo =
               "NOTE: Caught exception while trying to push commits to the repository"
+            app.log.fatal({ msg: extraInfo, error })
+          }
+
+          try {
+
+            await octokit.pulls.create({
+              owner: config.owner,
+              repo: config.repo,
+              title: "Updated Weights",
+              head: `${config.bbRepoOwner}:${config.bbBranch}`,
+              base: config.branch,
+              body: `Weights have been updated`, // TODO
+              maintainer_can_modify: false,
+
+            })
+          } catch (error) {
+            console.log(`Error while trying to create pull request:`);
+            console.log(error);
+            extraInfo =
+              `NOTE: Caught exception while trying to create pull request: ${error}`
             app.log.fatal({ msg: extraInfo, error })
           }
         }
