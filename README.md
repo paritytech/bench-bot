@@ -19,6 +19,7 @@ Create a `.env` file in the root with the following:
 
 ```
 APP_ID=<App id from Github App Settings>
+INSTALLATION_ID=<Installation id from Github Settings>
 BASE_BRANCH=<the default branch for merging into the PRs, e.g. master>
 CLIENT_ID=<Client ID from Github App Settings>
 CLIENT_SECRET=<Client ID from Github App Settings>
@@ -60,7 +61,7 @@ in the bot's directory.
 - `run {start,stop,restart}`: execute the relevant action for the bot.
 - `run update [ref]`: restart the bot with the branch or PR
   - For branch: `ssh user@remote '/home/benchbot/bench-bot/run update master'`
-  - For PR: `ssh user@remote '/home/benchbot/bench-bot/run update pull/number/head:branch'` 
+  - For PR: `ssh user@remote '/home/benchbot/bench-bot/run update pull/number/head:branch'`
     e.g. `pull/1/head:master`
 
 ### Monitoring Service commands

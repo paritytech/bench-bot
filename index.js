@@ -42,6 +42,8 @@ module.exports = (app) => {
 
   const appId = parseInt(process.env.APP_ID)
   assert(appId)
+  const installationId = parseInt(process.env.INSTALLATION_ID);
+  assert(installationId);
 
   const clientId = process.env.CLIENT_ID
   assert(clientId)
@@ -100,8 +102,8 @@ module.exports = (app) => {
     }
 
     try {
-      const installationId = (context.payload.installation || {}).id
-      if (!installationId) {
+      const sourceInstallationId = (context.payload.installation || {}).id
+      if (!sourceInstallationId) {
         await context.octokit.issues.createComment(
           context.issue({
             body: `Error: Installation id was missing from webhook payload`,
@@ -109,6 +111,9 @@ module.exports = (app) => {
         )
         app.log.error("Installation id was missing from webhook payload");
         return
+      } else if (sourceInstallationId != installationId) {
+        console.log(`Warning: ignoring payload from irrelevant installation ${sourceInstallationId}`);
+        return;
       }
 
       const getPushDomain = async function () {
