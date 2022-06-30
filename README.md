@@ -1,6 +1,8 @@
 # bench-bot
 
-This is a substrate-only bot at the moment.
+:warning: bench-bot has been deprecated in favor of https://github.com/paritytech/command-bot, which has a different execution model. A detailed comparison is provided in https://github.com/paritytech/pipeline-scripts/issues/54.
+
+Although development will stop in this repository, the open-source community might continue in forks such as https://github.com/AcalaNetwork/bench-bot and https://github.com/PureStake/bench-bot.
 
 # How to use
 
